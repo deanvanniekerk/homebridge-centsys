@@ -1,0 +1,35 @@
+export type ErrorCode =
+  | "configuration"
+  | "authentication"
+  | "otp-rejected"
+  | "otp-not-sent"
+  | "rate-limited"
+  | "http"
+  | "transport"
+  | "timeout"
+  | "cancelled"
+  | "protocol"
+  | "local-storage";
+
+const messages: Record<ErrorCode, string> = {
+  configuration: "Invalid configuration or input.",
+  authentication: "Authentication was rejected. Sign in again.",
+  "otp-rejected": "The one-time code was rejected.",
+  "otp-not-sent": "The service did not confirm sending a one-time code.",
+  "rate-limited":
+    "The service rate-limited this request. Wait before trying again.",
+  http: "The service returned an unsuccessful HTTP response.",
+  transport: "Could not reach the service securely.",
+  timeout: "The request exceeded its deadline.",
+  cancelled: "The operation was cancelled.",
+  protocol: "The service response did not match the expected protocol.",
+  "local-storage": "Could not read or write a private local credential file.",
+};
+
+/** Never includes request URLs, account identifiers, response bodies or nested causes. */
+export class CentsysError extends Error {
+  constructor(readonly code: ErrorCode) {
+    super(messages[code]);
+    this.name = "CentsysError";
+  }
+}

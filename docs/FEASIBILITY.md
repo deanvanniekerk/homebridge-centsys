@@ -4,7 +4,7 @@ Investigated 9 September 2026. This is a research assessment, not a claim of com
 
 ## Assessment
 
-The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection, and confirms the app displayed Closed, Opening, Open and Closing during the test. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control and state feedback are viable for this installation. Cloud is the chosen implementation route. Third-party authentication/discovery, telemetry decoding/freshness and Homebridge command behavior remain untested.
+The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection, and confirms the app displayed Closed, Opening, Open and Closing during the test. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control and state feedback are viable for this installation. Cloud is the chosen implementation route. Third-party OTP authentication now succeeds, but account discovery returns no operators. Telemetry decoding/freshness and Homebridge command behavior remain untested. See [live validation](VALIDATION.md).
 
 The product names in the supplied screenshots are **CENTSYS / CENTURION** and **MyCentsys Pro**. The screenshot gives Pro version **1.5.0.213**. No installed motor model or controller firmware version is established by these images.
 
@@ -92,9 +92,9 @@ AquaTemp's HTTP authentication, thermostat model, polling intervals and absolute
 
 ## Next implementation steps
 
-1. **Build a read-only cloud experiment.** Use the public protocol reference to authenticate, discover the linked gate and retrieve its overview. The silent app retrieval makes actual API discovery a meaningful test. Keep credentials, certificates and raw identifying responses out of the repo/logs.
+1. **Resolve discovery in the read-only client.** OTP login works; SMART Wi-Fi discovery returns an empty list, and backup/shared-access probes found no entries. Inspect controller identity and cloud Remote-user linkage, then validate the overview. Keep credentials, certificates and raw identifying responses out of the repo/logs.
 2. **Establish identity and state mappings.** Record the actual controller model/firmware, validate our client's open/closed/moving/stopped telemetry and its freshness, and retain sanitized fixtures. Compare against the Closed/Opening/Open/Closing states already observed by the owner in the official app.
 3. **Implement cloud control and reconciliation.** Validate family-specific trigger semantics and operating mode before issuing commands. Serialize target requests, suppress already-satisfied requests and never replay ambiguous trigger timeouts. Validate actual movement with someone observing the gate; the earlier disabled beam inputs must be considered before unattended closing.
 4. **Integrate Homebridge.** Expose one GarageDoorOpener service, following the AquaTemp lifecycle/configuration conventions. Verify the iHost Node/Homebridge/container environment, then test stale status, reconnects, physical-remote changes, pairing and target-state requests.
 
-Only official-app control has been exercised by the owner. No plugin, third-party account login, agent network scan or agent gate actuation has been performed.
+Only official-app control has been exercised by the owner. The agent completed third-party OTP login and read-only cloud discovery; no operator was returned, so no gate overview was requested. No Homebridge hardware test, agent network scan or agent gate actuation has been performed.

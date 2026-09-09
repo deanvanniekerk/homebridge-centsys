@@ -4,7 +4,7 @@ Investigated 9 September 2026. This is a research assessment, not a claim of com
 
 ## Assessment
 
-The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control is viable for this installation. Cloud is the chosen implementation route. Third-party authentication/discovery, fresh gate-state telemetry and Homebridge command behavior remain untested.
+The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection, and confirms the app displayed Closed, Opening, Open and Closing during the test. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control and state feedback are viable for this installation. Cloud is the chosen implementation route. Third-party authentication/discovery, telemetry decoding/freshness and Homebridge command behavior remain untested.
 
 The product names in the supplied screenshots are **CENTSYS / CENTURION** and **MyCentsys Pro**. The screenshot gives Pro version **1.5.0.213**. No installed motor model or controller firmware version is established by these images.
 
@@ -12,7 +12,7 @@ The product names in the supplied screenshots are **CENTSYS / CENTURION** and **
 
 The owner reports walking far away, successfully opening and closing the gate, and confirming no Bluetooth connections. Treat this as an owner-observed functional result, not an agent packet capture. The attached iOS screenshot shows Bluetooth enabled, visible listed accessories disconnected, and a Wi-Fi icon; it does not independently establish the gate's transport or a cellular-only connection. The distance test and owner report are the evidence for operation without a nearby Bluetooth link.
 
-This is sufficient to proceed with a cloud client prototype. No further Bluetooth-range troubleshooting is needed for that decision. Whether the app also updated its displayed gate position during this test has not been reported; command success and fresh state feedback must be validated separately.
+The owner subsequently confirmed that the app displayed **Closed → Opening → Open → Closing** during the same distance test. Both remote actuation and changing state feedback have therefore been observed through the official app. Latency was not measured; stopped/partially open, obstruction, and connectivity-loss behavior were not tested. This is sufficient to proceed with a cloud client prototype; our own protocol implementation still needs independent validation.
 
 ## Installation and completed checks
 
@@ -48,7 +48,7 @@ The combination of Direct and disabled Wi-Fi is consistent with Bluetooth. CENTU
 
 | Route | Current evidence | Assessment |
 | --- | --- | --- |
-| MyCentsys cloud | Owner reports open/close success far from gate; controller reports cloud connection; public client code exists | Selected route; third-party access and status freshness remain unverified |
+| MyCentsys cloud | Owner reports remote open/close and Closed/Opening/Open/Closing feedback; public client code exists | Selected route; third-party access, decoding and freshness remain unverified |
 | Direct Bluetooth | Official Pro connection mechanism; no usable CENTSYS BLE implementation established in this investigation | Possible, but authentication, protocol, range and reconnect behavior remain research work |
 | Direct local Wi-Fi API | No supported local LAN API established | Do not equate Wi-Fi connectivity with a local API |
 | Wired local interface | Manufacturer documents trigger inputs and a gate-status output; community hardware projects bridge these into HomeKit | Practical fallback, subject to exact board and electrical interface verification |
@@ -93,7 +93,7 @@ AquaTemp's HTTP authentication, thermostat model, polling intervals and absolute
 ## Next implementation steps
 
 1. **Build a read-only cloud experiment.** Use the public protocol reference to authenticate, discover the linked gate and retrieve its overview. The silent app retrieval makes actual API discovery a meaningful test. Keep credentials, certificates and raw identifying responses out of the repo/logs.
-2. **Establish identity and state mappings.** Record the actual controller model/firmware, validate open/closed/moving/stopped telemetry and its freshness, and retain sanitized fixtures. Confirm whether the owner saw app status change during the successful distance test.
+2. **Establish identity and state mappings.** Record the actual controller model/firmware, validate our client's open/closed/moving/stopped telemetry and its freshness, and retain sanitized fixtures. Compare against the Closed/Opening/Open/Closing states already observed by the owner in the official app.
 3. **Implement cloud control and reconciliation.** Validate family-specific trigger semantics and operating mode before issuing commands. Serialize target requests, suppress already-satisfied requests and never replay ambiguous trigger timeouts. Validate actual movement with someone observing the gate; the earlier disabled beam inputs must be considered before unattended closing.
 4. **Integrate Homebridge.** Expose one GarageDoorOpener service, following the AquaTemp lifecycle/configuration conventions. Verify the iHost Node/Homebridge/container environment, then test stale status, reconnects, physical-remote changes, pairing and target-state requests.
 

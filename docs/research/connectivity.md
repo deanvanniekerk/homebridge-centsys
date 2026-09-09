@@ -2,7 +2,7 @@
 
 Research date: 9 September 2026. Scope: official app connectivity and public integration source code. No account login, network probing of the installation, or gate operation was performed.
 
-Latest installation evidence around 15:41: the owner reports successful opening/closing after walking far from the gate and confirming no Bluetooth connection. Together with controller-reported cloud connectivity, this supports proceeding with a cloud implementation. Exact model, third-party authentication/discovery and fresh state feedback remain unverified. See [successful remote-control test](../FEASIBILITY.md#successful-remote-control-test--9-september-2026-around-1541).
+Latest installation evidence around 15:41, with subsequent owner clarification: opening/closing succeeded far from the gate with no Bluetooth connection, and the app displayed Closed, Opening, Open and Closing. Together with controller-reported cloud connectivity, this supports cloud control and state-feedback feasibility. Exact model, third-party authentication/discovery and our client's telemetry behavior remain unverified. See [successful remote-control test](../FEASIBILITY.md#successful-remote-control-test--9-september-2026-around-1541).
 
 ## Findings
 
@@ -58,4 +58,4 @@ No published manufacturer developer API/SDK or working native BLE integration wa
 
 A different repository, [andrew-snape/centurion-garage-HAS](https://github.com/andrew-snape/centurion-garage-HAS), calls a local `http://<IP>/api?key=...` endpoint for garage equipment. Its [source](https://github.com/andrew-snape/centurion-garage-HAS/blob/main/custom_components/centurion/cover.py) does not establish compatibility with CENTSYS SMART gate controllers or MyCentsys. It must not be cited as proof that this gate exposes a LAN API.
 
-Proceed with authenticated read-only discovery/status and identify the actual controller model/firmware before command encoding. The remaining state question is whether the official app displayed fresh position changes during the owner's successful remote-control test. No third-party protocol or Homebridge hardware test has run yet.
+Proceed with authenticated read-only discovery/status and identify the actual controller model/firmware before command encoding. Official-app Closed/Opening/Open/Closing feedback is now confirmed by the owner; latency, stopped states and fault behavior remain unmeasured. No third-party protocol or Homebridge hardware test has run yet.

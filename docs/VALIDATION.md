@@ -24,7 +24,15 @@ Local tests exercise real loopback HTTP requests through an injected fetch trans
 
 This reproduces the absence of cloud discovery seen during SMART Plus Retrieval. It does not disprove the owner's successful official-app control or identify why cloud linkage is missing. Check the actual controller identity and cloud Remote-user linkage before changing account records. Do not repeatedly delete working app entries or guess serial numbers.
 
-Credentials remain in ignored, owner-only local storage. No gate commands were sent. Test fixtures remain synthetic and based on community source, not captures of gate telemetry. The exact controller model and firmware remain unknown.
+Credentials remain in ignored, owner-only local storage. No gate commands were sent. Test fixtures remain synthetic and based on community source, not captures of gate telemetry. Later screenshot evidence establishes the model and firmware, as recorded below.
+
+### Controller identity and direct overview — 9 September 2026, 16:12 SAST
+
+New Pro screenshots identify **D5 Evo SMART+**, with **Core 2.1.0.0** and **Comms Interface 2.1.0.0**. The displayed Pro account number matches the authenticated account. Wi-Fi remains enabled, signal Excellent, Connected to Cloud Yes, and power saving off. The app update screen considers Pro 1.5.0.213 current; its separately displayed latest-version field is 1.5.0.207, so this screen is not evidence that controller firmware is current.
+
+A one-off read-only GetOperatorOverview call used the exact serial supplied in Operator Information. The existing client accepted the response as an empty overview list at 14:12:05 UTC. No current gate state or numeric product code/type was returned. The serial is held in ignored, owner-only `.local/auth/operator.json`; no identifying screenshot or serial is included in the public repo. This probe does not add a manual-device CLI mode.
+
+Empty discovery therefore is not the only obstacle: knowing the serial did not yield an HTTPS overview. Possible account/controller synchronization or protocol differences remain hypotheses, not diagnoses. The Force Sync option is visible in Pro and described there as syncing all settings, but its direction and effect on cloud registration have not been verified. A user-run sync followed by the same read-only requests is a proposed experiment; no sync, restart, user edit or gate command was performed by the agent.
 
 ## Remaining before Homebridge control
 

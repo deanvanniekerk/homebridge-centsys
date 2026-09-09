@@ -11,7 +11,12 @@ import {
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
-import { forgetSession, readSession, saveSession } from "../dist/storage.js";
+import {
+  forgetSession,
+  readKnownOperator,
+  readSession,
+  saveSession,
+} from "../dist/storage.js";
 
 const session = {
   mobileNumber: "+27820000000",
@@ -59,4 +64,40 @@ test("world-readable, malformed and symlinked credentials are rejected", async (
   await saveSession(session, path);
   assert.equal(await readFile(target, "utf8"), "untouched");
   assert.deepEqual(await readSession(path), session);
+});
+
+test("manual SMART+ identities reject transcription errors and discard supplied metadata", async (t) => {
+  const path = await directory(t);
+  const file = join(path, "operator.json");
+  const serial = "00112233445566778899aabb";
+  await writeFile(
+    file,
+    JSON.stringify({
+      serialNumber: serial,
+      deviceName: "Private gate",
+      isWifiDevice: true,
+      deviceWiFiStatus: { isOnline: true },
+    }),
+    { mode: 0o600 },
+  );
+  assert.deepEqual(await readKnownOperator(path), {
+    serialNumber: serial.toUpperCase(),
+    productCode: null,
+    productType: null,
+    isWifiDevice: null,
+    online: null,
+  });
+  for (const invalid of [
+    serial + "0",
+    serial.slice(1),
+    "Z" + serial.slice(1),
+    " " + serial,
+    null,
+  ]) {
+    await writeFile(file, JSON.stringify({ serialNumber: invalid }));
+    await assert.rejects(readKnownOperator(path), storageError);
+  }
+  await writeFile(file, JSON.stringify({ serialNumber: serial }));
+  await chmod(file, 0o644);
+  await assert.rejects(readKnownOperator(path), storageError);
 });

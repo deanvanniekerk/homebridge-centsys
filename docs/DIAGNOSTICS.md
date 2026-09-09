@@ -48,6 +48,17 @@ Beam, power and alarm values remain raw nullable numeric codes pending hardware 
 
 All requests have a ten-second deadline, including body reads; response bodies are limited to 1 MiB. Redirects are rejected and normal TLS verification stays enabled. There are no automatic retries. HTTP 401/403 require reauthentication; 429 requires waiting before a user-initiated retry. Errors contain fixed categories, without raw server text, URLs, headers or credentials.
 
+## Read a known SMART+ operator
+
+If discovery is empty but you have the serial from your own Pro Operator Information screen, create `.local/auth/operator.json` locally with a JSON `serialNumber` string containing that serial. Copy it from the app to avoid transcription errors. Set its permissions to 0600; the existing auth directory must remain 0700. This manual SMART+ path requires exactly 24 hexadecimal characters and never guesses, pads or truncates an identity. Do not put the actual serial in a public issue, commit or command-line argument.
+
+```sh
+chmod 600 .local/auth/operator.json
+npm run diagnose -- status-known
+```
+
+This bypasses discovery for one explicitly configured operator and sends only an overview request. The report marks `identitySource` as `owner-configured`, with unknown online/product metadata. A successful read does not establish automatic account discovery, live MQTT access, or permission for any activation command. The ordinary `status` command continues to test discovery. Missing/malformed/insecure operator files fail with `local-storage`.
+
 ## Live validation
 
 After login, share only the sanitized output from `status`. First establish whether this account's gate appears and which numeric product codes it reports. Then compare repeated reports against the official app during an observed opening/closing cycle. Keep cloud-cached responses and missing states as findings; do not adjust decoding to force an expected result. The earlier silent SMART Plus Retrieval result makes discovery itself an open test.

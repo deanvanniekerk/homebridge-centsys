@@ -2,9 +2,9 @@
 
 A Homebridge plugin in development for controlling CENTURION / CENTSYS gates from Apple Home, with open/close control and gate-state reporting.
 
-**Status: read-only cloud client implemented; Homebridge integration pending.** The owner reports successful remote open/close through MyCentsys Remote outside nearby Bluetooth range, with displayed Closed, Opening, Open and Closing states during the test. Live OTP login succeeded, but SMART Wi-Fi discovery returned no operators for the account. The client has 26 passing local tests; live gate-status validation remains blocked on discovery. There are no gate commands or installable Homebridge accessories yet, and npm publication is disabled.
+**Status: read-only cloud client implemented; Homebridge integration pending.** The owner reports successful remote open/close through MyCentsys Remote outside nearby Bluetooth range, with displayed Closed, Opening, Open and Closing states during the test. Live OTP login succeeded, but SMART Wi-Fi discovery returned no operators for the account. A manually configured controller serial now returns a cloud-reported Closed state. The client has 27 passing local tests; live state transitions and freshness remain unverified. There are no gate commands or installable Homebridge accessories yet, and npm publication is disabled.
 
-The intended accessory provides open/close requests and observed gate state through Homebridge on iHost. The current diagnostic client supports phone/OTP authentication, discovery and HTTPS operator overviews. Pro identifies the installation as D5 Evo SMART+, with Core and Comms Interface firmware 2.1.0.0. A direct HTTPS overview request using its serial also returned no rows.
+The intended accessory provides open/close requests and observed gate state through Homebridge on iHost. The current diagnostic client supports phone/OTP authentication, discovery and HTTPS operator overviews. Pro identifies the installation as D5 Evo SMART+, with Core and Comms Interface firmware 2.1.0.0. Use `status-known` with a privately configured serial when automatic discovery is empty.
 
 ## Run the diagnostic client
 

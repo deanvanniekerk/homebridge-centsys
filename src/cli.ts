@@ -7,6 +7,7 @@ import { credential, normalizeNumber } from "./protocol.js";
 import {
   forgetSession,
   readPrivate,
+  readKnownOperator,
   readSession,
   saveSession,
 } from "./storage.js";
@@ -83,7 +84,7 @@ async function main(): Promise<void> {
   const args = process.argv.slice(2);
   if (args.length === 0 || (args.length === 1 && args[0] === "--help")) {
     process.stdout.write(
-      "Read-only CENTSYS diagnostics\n\n  npm run prepare:auth          Fetch the pinned bootstrap credential locally\n  npm run diagnose -- login    Interactive phone/OTP sign-in (hidden input)\n  npm run diagnose -- status   Discover gates and print a sanitized cloud overview\n  npm run diagnose -- logout   Remove the local session (does not revoke it remotely)\n",
+      "Read-only CENTSYS diagnostics\n\n  npm run prepare:auth          Fetch the pinned bootstrap credential locally\n  npm run diagnose -- login    Interactive phone/OTP sign-in (hidden input)\n  npm run diagnose -- status   Discover gates and print a sanitized cloud overview\n  npm run diagnose -- status-known   Read the operator in private operator.json\n  npm run diagnose -- logout   Remove the local session (does not revoke it remotely)\n",
     );
     return;
   }
@@ -94,17 +95,21 @@ async function main(): Promise<void> {
     process.stdout.write("Local session removed.\n");
     return;
   }
-  if (args[0] !== "status") throw new CentsysError("configuration");
+  if (args[0] !== "status" && args[0] !== "status-known")
+    throw new CentsysError("configuration");
+  const manual = args[0] === "status-known";
   const session = await readSession();
   const client = new CentsysReadClient({
     mobileNumber: session.mobileNumber,
     region: session.region,
     sessionToken: session.token,
   });
-  const devices = await client.discover(shutdown.signal);
+  const devices = manual
+    ? [await readKnownOperator()]
+    : await client.discover(shutdown.signal);
   const overviews = await client.overview(devices, shutdown.signal);
   process.stdout.write(
-    `${JSON.stringify(diagnosticReport(devices, overviews, new Date()), null, 2)}\n`,
+    `${JSON.stringify({ ...diagnosticReport(devices, overviews, new Date()), identitySource: manual ? "owner-configured" : "cloud-discovery" }, null, 2)}\n`,
   );
   if (devices.length === 0)
     process.stderr.write(

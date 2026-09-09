@@ -4,8 +4,13 @@ import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { CentsysError } from "./errors.js";
-import { credential, normalizeNumber, record } from "./protocol.js";
-import type { Region } from "./protocol.js";
+import {
+  credential,
+  decodeDevices,
+  normalizeNumber,
+  record,
+} from "./protocol.js";
+import type { Device, Region } from "./protocol.js";
 
 export const authDirectory = fileURLToPath(
   new URL("../.local/auth/", import.meta.url),
@@ -14,6 +19,30 @@ export interface Session {
   mobileNumber: string;
   region: Region;
   token: string;
+}
+
+type PrivateFile = "session.json" | "bootstrap-token" | "operator.json";
+
+/** Explicit SMART+ identity from the owner's controller screen, never guessed. */
+export async function readKnownOperator(
+  directory = authDirectory,
+): Promise<Device> {
+  try {
+    const value = record(
+      JSON.parse(await readPrivate("operator.json", directory)),
+    );
+    if (
+      typeof value.serialNumber !== "string" ||
+      !/^[0-9a-f]{24}$/i.test(value.serialNumber)
+    ) {
+      throw new CentsysError("local-storage");
+    }
+    return decodeDevices([
+      { serialNumber: value.serialNumber.toUpperCase() },
+    ])[0]!;
+  } catch {
+    throw new CentsysError("local-storage");
+  }
 }
 
 function decodeSession(value: unknown): Session {
@@ -41,7 +70,7 @@ async function privateDirectory(directory: string): Promise<void> {
 }
 
 export async function readPrivate(
-  name: "session.json" | "bootstrap-token",
+  name: PrivateFile,
   directory = authDirectory,
 ): Promise<string> {
   let handle;
@@ -71,7 +100,7 @@ export async function readPrivate(
 }
 
 export async function writePrivate(
-  name: "session.json" | "bootstrap-token",
+  name: PrivateFile,
   text: string,
   directory = authDirectory,
 ): Promise<void> {

@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 // Execute the shipped wizard event handlers against a small DOM/Homebridge boundary.
-async function wizard(rows) {
+async function wizard(rows, verify) {
   const elements = new Map();
   const element = (id) => {
     if (!elements.has(id))
@@ -46,8 +46,12 @@ async function wizard(rows) {
   };
   const homebridge = {
     getPluginConfig: async () => [{ platform: "Centsys", gates: saved }],
-    request: async (path) =>
-      path === "/status" ? { state: "signed-in", accountSuffix: "0000" } : rows,
+    request: async (path, input) =>
+      path === "/status"
+        ? { state: "signed-in", accountSuffix: "0000" }
+        : path === "/gate/verify-wifi"
+          ? verify(input)
+          : rows,
   };
   vm.runInNewContext(await readFile("homebridge-ui/public/app.js", "utf8"), {
     document,
@@ -103,5 +107,59 @@ test("empty and failed discovery expose manual help", async () => {
     const { element: e, event } = await wizard(result);
     await event("discover", "click");
     assert.equal(e("manual-help").open, true);
+  }
+});
+
+test("Wi-Fi verification applies only a matching successful result and never enables control", async () => {
+  let resolve;
+  const pending = new Promise((r) => {
+    resolve = r;
+  });
+  const { element: e, event } = await wizard([], async (input) => {
+    assert.equal(input.model, "d5-evo-smart-plus");
+    assert.equal(input.modelConfirmed, true);
+    assert.equal(input.target, undefined);
+    return pending;
+  });
+  e("wifi-mac").value = "AA:BB:CC:DD:EE:FE";
+  e("wifi-model-confirmed").checked = true;
+  await event("verify-wifi", "click");
+  resolve({
+    serialNumber: e("serial").value,
+    macAddress: "00:EF:DD:CC:BB:AA",
+    verified: true,
+    state: "closed",
+  });
+  await new Promise((r) => setImmediate(r));
+  assert.equal(e("mac").value, "00:EF:DD:CC:BB:AA");
+  assert.equal(e("enable-control").checked, false);
+  assert.equal(e("trigger-confirmed").checked, false);
+  await event("wifi-mac", "input", "AA:BB:CC:DD:EE:00");
+  assert.equal(e("mac").value, "");
+});
+
+test("Wi-Fi helper never applies a failed or stale response", async () => {
+  for (const change of [false, true]) {
+    let resolve;
+    const pending = new Promise((r) => {
+      resolve = r;
+    });
+    const { element: e, event } = await wizard([], () => pending);
+    e("wifi-mac").value = "AA:BB:CC:DD:EE:FE";
+    e("wifi-model-confirmed").checked = true;
+    await event("verify-wifi", "click");
+    if (change) await event("serial", "input", "00112233445566778899AACC");
+    resolve(
+      change
+        ? {
+            serialNumber: "00112233445566778899AABB",
+            macAddress: "00:EF:DD:CC:BB:AA",
+            verified: true,
+            state: "closed",
+          }
+        : { failed: true },
+    );
+    await new Promise((r) => setImmediate(r));
+    assert.equal(e("mac").value, change ? "" : "AA:BB:CC:DD:EE:01");
   }
 });

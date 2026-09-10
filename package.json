@@ -1,6 +1,6 @@
 {
   "name": "homebridge-centsys",
-  "version": "0.1.0-alpha.6",
+  "version": "0.1.0-alpha.7",
   "private": true,
   "description": "CENTSYS SMART+ gate monitoring and experimental control for Homebridge",
   "type": "module",
@@ -25,13 +25,15 @@
   },
   "devDependencies": {
     "@types/node": "22.20.1",
+    "@types/proper-lockfile": "4.1.4",
     "homebridge": "2.4.0",
     "prettier": "3.9.6",
     "typescript": "6.0.3"
   },
   "dependencies": {
     "@homebridge/plugin-ui-utils": "2.2.6",
-    "mqtt": "5.15.2"
+    "mqtt": "5.15.2",
+    "proper-lockfile": "4.1.2"
   },
   "main": "dist/index.js",
   "exports": "./dist/index.js",

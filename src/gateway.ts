@@ -6,6 +6,7 @@ import type { Overview } from "./protocol.js";
 import { gateSession } from "./mqtt-session.js";
 import type { GateConfig } from "./settings.js";
 import type { ActivationResponse, LiveState, Target } from "./mqtt-codec.js";
+import { withSessionLock } from "./session-lock.js";
 import { CentsysError } from "./errors.js";
 
 export class CloudGateway {
@@ -45,6 +46,13 @@ export class CloudGateway {
       this.#verified.clear();
     }
     return { session, client: this.#client };
+  }
+  async #lockedSession(options: Parameters<typeof gateSession>[0]) {
+    return withSessionLock(
+      this.directory,
+      options.signal ?? new AbortController().signal,
+      (signal) => this.#runSession({ ...options, signal }),
+    );
   }
   async #getCertificate(client: CentsysReadClient, signal: AbortSignal) {
     if (!this.#certificate || Date.now() - this.#certificateAt > 3_600_000) {
@@ -86,7 +94,7 @@ export class CloudGateway {
       if (previous && Date.now() - previous.at < LIVE_REFRESH_MS) continue;
       // Remove old proof before probing: neither failure nor cancellation renews it.
       this.#verified.delete(key);
-      const result = await this.#runSession({
+      const result = await this.#lockedSession({
         session,
         serialNumber: gate.serialNumber,
         macAddress: gate.macAddress,
@@ -137,7 +145,7 @@ export class CloudGateway {
       await reading?.promise.catch(() => {});
       signal.throwIfAborted();
       const { session, client } = await this.#load();
-      return await this.#runSession({
+      return await this.#lockedSession({
         session,
         serialNumber: gate.serialNumber,
         macAddress: gate.macAddress,

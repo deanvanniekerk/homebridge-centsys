@@ -137,3 +137,21 @@ test("changed credentials or protocol address cannot reuse earlier live proof", 
   await gateway.read([{ ...gate, macAddress: "AA:BB:CC:DD:EE:00" }], signal);
   assert.equal(probes, 3);
 });
+
+test("a UI session lease blocks runtime monitoring and activation before MQTT connects", async (t) => {
+  const { withSessionLock } = await import("../dist/session-lock.js");
+  const gateway = await setup(t, async () =>
+    assert.fail("Competing MQTT connection"),
+  );
+  const signal = new AbortController().signal;
+  await withSessionLock(gateway.directory, signal, async () => {
+    await assert.rejects(
+      gateway.read([gate], signal),
+      (e) => e.code === "busy",
+    );
+    await assert.rejects(
+      gateway.activate(gate, "open", signal, () => {}),
+      (e) => e.code === "busy",
+    );
+  });
+});

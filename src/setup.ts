@@ -18,11 +18,14 @@ import {
   forgetSession,
 } from "./storage.js";
 import { fetchBootstrap } from "./bootstrap.js";
+import { wifiMacCandidate } from "./mac-setup.js";
+import { withSessionLock } from "./session-lock.js";
+import { gateSession } from "./mqtt-session.js";
 import { gateIdentity } from "./settings.js";
 
 type Client = Pick<
   CentsysReadClient,
-  "sendOtp" | "validateOtp" | "discover" | "overview"
+  "sendOtp" | "validateOtp" | "discover" | "overview" | "certificate"
 >;
 interface SetupOptions {
   directory: string;
@@ -31,6 +34,7 @@ interface SetupOptions {
   ) => Client;
   bootstrap?: () => Promise<string>;
   now?: () => number;
+  verifySession?: typeof gateSession;
 }
 
 /** UI lifetime owns OTP challenges; only a validated session reaches persistent storage. */
@@ -39,6 +43,7 @@ export class SetupService {
   readonly #client: NonNullable<SetupOptions["createClient"]>;
   readonly #bootstrap: () => Promise<string>;
   readonly #now: () => number;
+  readonly #verifySession: typeof gateSession;
   #busy = false;
   #pending:
     | {
@@ -56,6 +61,7 @@ export class SetupService {
     this.#client = options.createClient ?? ((o) => new CentsysReadClient(o));
     this.#bootstrap = options.bootstrap ?? fetchBootstrap;
     this.#now = options.now ?? Date.now;
+    this.#verifySession = options.verifySession ?? gateSession;
   }
   async #exclusive<T>(fn: () => Promise<T>): Promise<T> {
     if (this.#busy) throw new CentsysError("rate-limited");
@@ -188,6 +194,45 @@ export class SetupService {
     );
     if (!rows[0]) return { found: false, state: "unknown" };
     return { found: true, state: rows[0].state };
+  }
+  async verifyWifiAddress(input: unknown) {
+    return this.#exclusive(async () => {
+      const candidate = wifiMacCandidate(input);
+      const session = await readSession(this.#directory);
+      if (session.region !== "za") throw new CentsysError("control-disabled");
+      const deadline = AbortSignal.timeout(30_000);
+      try {
+        return await withSessionLock(
+          this.#directory,
+          deadline,
+          async (signal) => {
+            const certificate =
+              await this.#authenticated(session).certificate(signal);
+            const result = await this.#verifySession({
+              session,
+              ...candidate,
+              certificate,
+              signal,
+              // No target, time sync or activation. Success requires identity AND live telemetry.
+            });
+            const current = await readSession(this.#directory);
+            if (
+              current.token !== session.token ||
+              current.mobileNumber !== session.mobileNumber ||
+              current.region !== session.region
+            )
+              throw new CentsysError("authentication");
+            if (result.activated || result.live.state === "unknown")
+              throw new CentsysError("state-unavailable");
+            signal.throwIfAborted();
+            return { ...candidate, state: result.live.state, verified: true };
+          },
+        );
+      } catch (error) {
+        if (deadline.aborted) throw new CentsysError("timeout");
+        throw error;
+      }
+    });
   }
   async logout() {
     return this.#exclusive(async () => {

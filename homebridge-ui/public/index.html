@@ -106,33 +106,41 @@
           product model or IP address.
         </li>
       </ol>
-      <h5>Find the address — two different values</h5>
-      <p>
-        The plugin needs the <strong>protocol MAC</strong> supplied by cloud
-        discovery. The inspected Remote 2.1.0.38 gate-settings screen only
-        offers customization, administrators and device removal; it has no
-        identifier lookup. Pro exposes the serial and Wi-Fi MAC, but we have not
-        verified a screen exposing the protocol MAC directly.
-      </p>
+      <h5>Copy the Wi-Fi MAC for the D5 Evo SMART+ helper</h5>
       <ol>
         <li>In Pro, connect to the operator and open Wi-Fi Settings.</li>
         <li>
-          Under Advanced Wi-Fi Information, find MAC Address. This is the
-          <strong>Wi-Fi MAC</strong>; record it for troubleshooting, but do not
-          paste it into the protocol MAC field as an equivalent value.
+          Under Advanced Wi-Fi Information, find MAC Address. Copy the six byte
+          pairs into <strong>Wi-Fi MAC from Pro</strong> below.
         </li>
         <li>
-          If discovery still supplies no protocol MAC, setup needs further
-          assistance. Record your app versions and the operator model and
-          firmware from Operator Information. Share identifiers privately when
-          requested, not in a public issue.
+          Confirm your exact model in Operator Information is D5 Evo SMART+,
+          then close Pro and Remote. Leave gate Wi-Fi enabled and connected to
+          cloud.
+        </li>
+        <li>
+          After updating this plugin, restart its child bridge before using the
+          helper so setup and monitoring share the session lock.
+        </li>
+        <li>
+          Click Verify Wi-Fi address below. On success the helper fills the
+          protocol MAC. Review the gate and save.
         </li>
       </ol>
       <p>
-        The tested gate required a different protocol address from its Wi-Fi
-        MAC. A universal conversion has not been established. Check gate status
-        below only checks cloud status for the serial; it does not validate a
-        manually entered MAC. Do not enable control to test a guessed address.
+        The Wi-Fi MAC is not the protocol MAC. This experimental helper tries
+        the single conversion observed on one D5 Evo SMART+ in South Africa. It
+        must receive accepted identity authentication and fresh live status
+        before applying the address. It sends no movement command and does not
+        search other addresses if the check fails. Other controllers are not
+        supported.
+      </p>
+      <p>
+        A timeout may mean the gate is still reconnecting, rather than an
+        incorrect address. Wait and retry manually. If verification keeps
+        failing, record the model, firmware and app versions for setup
+        assistance. Share identifying screenshots privately, not in a public
+        issue.
       </p>
     </details>
     <form id="gate-form">
@@ -158,6 +166,37 @@
         Check gate status
       </button>
       <p id="gate-state" role="status" aria-live="polite"></p>
+      <details id="wifi-helper">
+        <summary>Use the Wi-Fi MAC from Pro (D5 Evo SMART+ only)</summary>
+        <p>
+          For South African D5 Evo SMART+ operators when discovery supplies no
+          protocol address. Use the steps in Manual setup above.
+        </p>
+        <label for="wifi-mac">Wi-Fi MAC from Pro</label>
+        <input
+          id="wifi-mac"
+          class="form-control"
+          placeholder="AA:BB:CC:DD:EE:FF"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <label class="check-label"
+          ><input id="wifi-model-confirmed" type="checkbox" /> Operator
+          Information confirms my model is D5 Evo SMART+.</label
+        >
+        <button
+          id="verify-wifi"
+          class="btn btn-outline-secondary"
+          type="button"
+        >
+          Verify Wi-Fi address (no movement)
+        </button>
+        <p class="hint">
+          Close Pro and Remote first. Verification can take up to 30 seconds. If
+          another session is busy, retry when it finishes. Only a verified
+          address is applied; saving remains a separate step.
+        </p>
+      </details>
       <label for="mac">Gate protocol MAC address</label
       ><input
         id="mac"

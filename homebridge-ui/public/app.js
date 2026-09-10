@@ -6,7 +6,9 @@
     gates = [],
     discovered = [],
     challengeId,
-    busy = false;
+    busy = false,
+    identityRevision = 0,
+    wifiVerified = false;
   const notify = (message) => {
     el("notice").textContent = message;
   };
@@ -39,6 +41,15 @@
           "That code was rejected or the login attempt expired. Check the code, or request another.",
         "rate-limited":
           "Please wait before trying again. Code requests must be at least one minute apart.",
+        busy: "Another gate session is active. Wait for it to finish, then retry verification.",
+        "gate-authentication":
+          "The controller rejected this candidate address. Check the serial, Wi-Fi MAC and model; no gate command was sent.",
+        timeout:
+          "Verification timed out. Leave the gate Wi-Fi on, close the official apps and allow reconnection time before trying again.",
+        "control-disabled":
+          "This Wi-Fi address helper supports D5 Evo SMART+ in South Africa only.",
+        "state-unavailable":
+          "No usable live status was verified. The candidate address was not applied.",
         configuration:
           "Check the phone number, serial number and selected options.",
         "local-storage":
@@ -86,7 +97,21 @@
     el("configured").value = selected;
     loadGate();
   }
+  function invalidateWifiCheck() {
+    identityRevision++;
+    if (wifiVerified) {
+      el("mac").value = "";
+      el("mac-source").textContent =
+        "Details changed. Verify the Wi-Fi address again.";
+      el("enable-control").checked = false;
+      el("trigger-confirmed").checked = false;
+    }
+    wifiVerified = false;
+  }
   function loadGate() {
+    invalidateWifiCheck();
+    el("wifi-mac").value = "";
+    el("wifi-model-confirmed").checked = false;
     const selected = el("configured").value;
     const g = selected === "" ? {} : gates[Number(selected)] || {};
     el("gate-name").value = g.name || "Gate";
@@ -142,6 +167,7 @@
     el("gate-state").textContent = "";
   });
   el("serial").addEventListener("input", () => {
+    invalidateWifiCheck();
     el("gate-state").textContent = "";
     el("discovered").value = "";
     el("mac").value = "";
@@ -151,9 +177,73 @@
     el("trigger-confirmed").checked = false;
   });
   el("mac").addEventListener("input", () => {
+    identityRevision++;
+    wifiVerified = false;
     el("mac-source").textContent =
       "Manually entered address; cloud status does not validate it.";
   });
+  el("wifi-mac").addEventListener("input", invalidateWifiCheck);
+  el("wifi-model-confirmed").addEventListener("change", invalidateWifiCheck);
+  el("verify-wifi").addEventListener(
+    "click",
+    () =>
+      void task(async () => {
+        const serialNumber = el("serial").value.trim().toUpperCase();
+        const wifiMacAddress = el("wifi-mac").value.trim().toUpperCase();
+        if (
+          !el("wifi-model-confirmed").checked ||
+          !/^[0-9A-F]{24}$/.test(serialNumber) ||
+          !/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(wifiMacAddress)
+        ) {
+          notify(
+            "Enter the full controller serial and Wi-Fi MAC from Pro, and confirm D5 Evo SMART+.",
+          );
+          return;
+        }
+        const revision = identityRevision;
+        notify(
+          "Verifying one candidate address and waiting for live status. This can take up to 30 seconds. No open/close command is sent.",
+        );
+        const result = await request("/gate/verify-wifi", {
+          serialNumber,
+          wifiMacAddress,
+          model: "d5-evo-smart-plus",
+          modelConfirmed: true,
+        });
+        if (result.failed) return;
+        if (
+          revision !== identityRevision ||
+          serialNumber !== el("serial").value.trim().toUpperCase() ||
+          wifiMacAddress !== el("wifi-mac").value.trim().toUpperCase()
+        ) {
+          notify(
+            "The gate details changed during verification. Verify the current details again.",
+          );
+          return;
+        }
+        if (
+          result.verified !== true ||
+          result.serialNumber !== serialNumber ||
+          !/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(result.macAddress)
+        ) {
+          notify(
+            "No verified address was returned. The address field was left unchanged.",
+          );
+          return;
+        }
+        el("mac").value = result.macAddress;
+        wifiVerified = true;
+        el("enable-control").checked = false;
+        el("trigger-confirmed").checked = false;
+        el("mac-source").textContent =
+          "Candidate verified by controller identity and fresh live status.";
+        el("gate-state").textContent =
+          `Live state at verification: ${result.state}.`;
+        notify(
+          "Address verified and filled in. Review the gate and save; open/close control remains off.",
+        );
+      }),
+  );
   el("login-form").addEventListener("submit", (event) => {
     event.preventDefault();
     void task(async () => {

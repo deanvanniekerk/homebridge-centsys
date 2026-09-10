@@ -20,6 +20,7 @@ class UiServer extends HomebridgePluginUiServer {
       "/auth/logout": () => service!.logout(),
       "/devices": () => service!.devices(),
       "/gate/check": (data) => service!.checkGate(data),
+      "/gate/verify-wifi": (data) => service!.verifyWifiAddress(data),
     };
     for (const [path, handler] of Object.entries(handlers))
       this.onRequest(path, async (input) => {

@@ -140,3 +140,45 @@ test("control stays disabled by default and shutdown prevents further activation
   c.close();
   assert.equal(commands, 0);
 });
+test("queued jobs have a 30-second deadline, cancel on shutdown, and never retry", async (t) => {
+  for (const reason of ["timeout", "shutdown"]) {
+    const deadline = new AbortController();
+    t.mock.method(AbortSignal, "timeout", (ms) => {
+      assert.equal(ms, 30_000);
+      return deadline.signal;
+    });
+    const reported = deferred();
+    let commands = 0;
+    const c = new GateCoordinator(
+      [gate],
+      {
+        read: async () => [row("closed")],
+        activate: async (_g, _target, signal) => {
+          commands++;
+          await new Promise((_resolve, reject) =>
+            signal.addEventListener(
+              "abort",
+              () => reject(new CentsysError("cancelled")),
+              { once: true },
+            ),
+          );
+        },
+      },
+      15,
+    );
+    await c.refresh();
+    c.requestTarget(gate.serialNumber, "open", reported.resolve);
+    assert.equal(c.snapshot(gate.serialNumber).state, "closed");
+    assert.equal(c.snapshot(gate.serialNumber).target, "open");
+    if (reason === "timeout") deadline.abort();
+    else c.close();
+    assert.equal(
+      (await reported.promise).code,
+      reason === "timeout" ? "timeout" : "cancelled",
+    );
+    assert.equal(commands, 1);
+    assert.equal(c.snapshot(gate.serialNumber).state, "unknown");
+    c.close();
+    t.mock.restoreAll();
+  }
+});

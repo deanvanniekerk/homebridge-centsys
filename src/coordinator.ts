@@ -141,7 +141,7 @@ export class GateCoordinator extends EventEmitter {
     }
     this.emit("update");
   }
-  async setTarget(serial: string, target: Target): Promise<void> {
+  #commandGate(serial: string, target: Target): GateConfig {
     if (target !== "open" && target !== "closed")
       throw new CentsysError("configuration");
     const gate = this.gates.find((g) => g.serialNumber === serial);
@@ -149,12 +149,26 @@ export class GateCoordinator extends EventEmitter {
     if (this.#abort.signal.aborted) throw new CentsysError("cancelled");
     if (this.#command || Date.now() < this.#cooldownUntil)
       throw new CentsysError("busy");
+    return gate;
+  }
+  /** Accept one bounded job without holding HomeKit's write response open. */
+  requestTarget(
+    serial: string,
+    target: Target,
+    onError: (error: unknown) => void,
+  ): void {
+    this.#commandGate(serial, target);
+    void this.setTarget(serial, target).catch(onError);
+  }
+  async setTarget(serial: string, target: Target): Promise<void> {
+    const gate = this.#commandGate(serial, target);
     this.#command = true;
     this.#generation++;
-    const signal = AbortSignal.any([
-      this.#abort.signal,
-      AbortSignal.timeout(8000),
-    ]);
+    const before = this.#snapshots.get(serial);
+    if (before) this.#snapshots.set(serial, { ...before, target });
+    this.emit("update");
+    const deadline = AbortSignal.timeout(30_000);
+    const signal = AbortSignal.any([this.#abort.signal, deadline]);
     try {
       // Old HTTP reads are discarded by generation; they cannot delay a user command.
       await this.gateway.activate(gate, target, signal, (live) => {
@@ -164,6 +178,7 @@ export class GateCoordinator extends EventEmitter {
           receivedAt: Date.now(),
           obstruction: live.obstruction,
           obstructionAt: Date.now(),
+          target,
         });
         this.emit("update");
       });
@@ -172,6 +187,11 @@ export class GateCoordinator extends EventEmitter {
       if (state) this.#snapshots.set(serial, { ...state, target });
       this.#fastUntil = Date.now() + 60_000;
     } catch (error) {
+      if (
+        deadline.aborted &&
+        !(error instanceof CentsysError && error.code === "command-uncertain")
+      )
+        error = new CentsysError("timeout");
       this.#snapshots.set(serial, {
         state: "unknown",
         receivedAt: Date.now(),

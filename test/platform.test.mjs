@@ -9,6 +9,7 @@ import hap from "@homebridge/hap-nodejs";
 import { PlatformAccessory } from "../node_modules/homebridge/dist/platformAccessory.js";
 import { CentsysPlatform } from "../dist/platform.js";
 import { parseConfig } from "../dist/settings.js";
+import { CentsysError } from "../dist/errors.js";
 const serialNumber = "00112233445566778899AABB";
 const config = { platform: "Centsys", gates: [{ name: "Gate", serialNumber }] };
 test("real HAP garage service remains readable with cloud state and no obstruction report, and rejects disabled writes", async (t) => {
@@ -90,6 +91,94 @@ test("real HAP garage service remains readable with cloud state and no obstructi
   ]) {
     await assert.rejects(service.getCharacteristic(type).handleGetRequest());
   }
+});
+test("HomeKit acknowledges a queued command before delayed telemetry and reports a later failure without retrying", async (t) => {
+  let release;
+  const pending = new Promise((resolve) => {
+    release = resolve;
+  });
+  let commands = 0;
+  const warnings = [];
+  const api = Object.assign(new EventEmitter(), {
+    hap,
+    platformAccessory: PlatformAccessory,
+    user: { storagePath: () => "/unused" },
+    registerPlatformAccessories: (_p, _n, accessories) => {
+      api.registered = accessories;
+    },
+    updatePlatformAccessories: () => {},
+    unregisterPlatformAccessories: () => {},
+  });
+  new CentsysPlatform(
+    {
+      info: () => {},
+      warn: (m) => warnings.push(m),
+      error: (m) => assert.fail(m),
+    },
+    {
+      platform: "Centsys",
+      gates: [
+        {
+          name: "Gate",
+          serialNumber,
+          enableControl: true,
+          macAddress: "AA:BB:CC:DD:EE:FF",
+          controlProfile: "d5-evo-smart-plus",
+          triggerModeConfirmed: true,
+        },
+      ],
+    },
+    api,
+    {
+      gateway: {
+        read: async () => [{ serialNumber, state: "closed" }],
+        activate: async () => {
+          commands++;
+          await pending;
+          throw new CentsysError("timeout");
+        },
+      },
+    },
+  );
+  t.after(() => {
+    api.emit("shutdown");
+    release();
+  });
+  api.emit("didFinishLaunching");
+  await new Promise((r) => setImmediate(r));
+  const service = api.registered[0].getService(hap.Service.GarageDoorOpener);
+  const target = service.getCharacteristic(hap.Characteristic.TargetDoorState);
+  const writing = target.handleSetRequest(0);
+  const accepted = await Promise.race([
+    writing.then(
+      () => true,
+      () => false,
+    ),
+    new Promise((r) => setImmediate(() => r(false))),
+  ]);
+  assert.equal(
+    accepted,
+    true,
+    "HomeKit must not wait for the delayed MQTT overview",
+  );
+  assert.equal(
+    await service
+      .getCharacteristic(hap.Characteristic.CurrentDoorState)
+      .handleGetRequest(),
+    1,
+  );
+  assert.equal(await target.handleGetRequest(), 0);
+  await assert.rejects(target.handleSetRequest(1));
+  assert.equal(commands, 1);
+  release();
+  await new Promise((r) => setImmediate(r));
+  assert.ok(warnings.includes(new CentsysError("timeout").message));
+  await assert.rejects(
+    service
+      .getCharacteristic(hap.Characteristic.CurrentDoorState)
+      .handleGetRequest(),
+  );
+  assert.equal(commands, 1);
 });
 test("configuration requires explicit supported control profile, MAC and trigger-mode confirmation", () => {
   assert.equal(parseConfig(config).gates[0].enableControl, false);

@@ -87,6 +87,14 @@ MQTT activation uses a fresh session, decoded gate telemetry, an explicit suppor
 
 No agent gate activation has been sent. Device identities, account details, pairing credentials and private backups are excluded from this report.
 
+### First HomeKit command and delayed telemetry — 10 September 2026
+
+The owner confirmed readiness at the gate. Control was explicitly enabled with the supported family, Wi-Fi identity and confirmed TRG endpoint behavior. One open request was made in Apple Home. Home briefly displayed Opening (its request presentation), then returned to Closed; the owner confirmed no physical movement. The runtime reported cancellation at its eight-second deadline. The failure was before the activation publish, so the plugin did not replay it and no close request was sent.
+
+A read-only diagnostic using the installed session on iHost completed certificate retrieval at 0.871 seconds, connected to MQTT at 1.569 seconds, and received the identity challenge at 1.893 seconds. The first 68-byte deviceOverview arrived at 13.866 seconds; the session returned Closed and `activated: false`. These are elapsed receive times for a single probe, not a guaranteed cadence. This isolates a delay that can exceed the original command budget without an authentication failure.
+
+Alpha.2 acknowledges accepted HomeKit commands promptly and runs one bounded command job. It keeps a 30-second overall deadline, the existing 25-second MQTT limit, fresh-state requirements and no activation retries. Current state remains observed; a requested target is stored separately. Tests reproduce the old blocking HAP write and verify prompt acknowledgement, later failure reporting, busy rejection, deadline cancellation and shutdown. All 45 tests passed, and alpha.2 was installed from a checksum-verified tarball on iHost with a CENTSYS-only child bridge restart. Physical actuation through the revised path remains pending.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

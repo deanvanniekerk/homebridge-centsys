@@ -132,20 +132,24 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
       service
         .getCharacteristic(C.TargetDoorState)
         .onGet(target)
-        .onSet(async (value) => {
+        .onSet((value) => {
           if (value !== 0 && value !== 1)
             throw new HapStatusError(INVALID_VALUE_IN_REQUEST);
-          try {
-            await this.#coordinator!.setTarget(
-              gate.serialNumber,
-              value === 0 ? "open" : "closed",
-            );
-          } catch (error) {
+          const report = (error: unknown) => {
             this.log.warn(
               error instanceof CentsysError
                 ? error.message
                 : "Gate request failed. Check the gate before trying again.",
             );
+          };
+          try {
+            this.#coordinator!.requestTarget(
+              gate.serialNumber,
+              value === 0 ? "open" : "closed",
+              report,
+            );
+          } catch (error) {
+            report(error);
             throw unavailable();
           }
         });

@@ -129,6 +129,14 @@ Eleven entries report `Wifi Remote Auth Fail`, all with the same malformed phone
 
 No MAC field was found in the workbook cells. The workbook remains unchanged outside the public repo; only [sanitized event excerpts](validation/2026-09-10-controller-log.json) are committed. No raw phone representation, controller serial or other user/device identifiers appear in those excerpts. The next useful validation is of the remote identity/key against the official app, with activation blocked.
 
+### Identity-only key audit — 10 September 2026
+
+An offline audit round-tripped both the registered phone and the malformed export representation through the pinned phone encoding. The corruption affects bytes 0–3 and 8–11; bytes 4–7 are unchanged, matching where the per-device portion of the XOR key applies. Using the known phone in the last four bytes gives a candidate key matching the **full Wi-Fi address incremented by two, then byte-reversed**, taking its first four bytes. It reconstructs the logged identity except for the first nibble, whose display/encoding behavior remains unexplained. This is a candidate derived from observed data, not a general address-conversion rule.
+
+[Espressif's ESP32 documentation](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/system/misc_system_api.html) describes Bluetooth using base MAC +2 in the four-universal-address configuration. That supports the plausibility of the offset but does not establish the controller's chip/configuration or CENTSYS byte ordering. Offline, the candidate turns the saved old command-02 status body into `[2,0,0,0]` and the previous activation reply's first two decoded fields into configuration 0/code 2. These reinterpretations remain conditional on the candidate key.
+
+A single live identity-only diagnostic used the saved authenticated account and this candidate. An independent publish allowlist permitted only connection request, one command 01 and disconnect; time sync and command 03 were blocked. It received a 12-byte identity reply after 631 ms with header `[1,1,2,135]` and decoded status `[1,0,0,0]`. The existing strict parser rejected the nonzero fourth header byte and ended the probe with `protocol`. No time-sync or activation was sent. The change from status 2 to 1 is promising but needs correlation with a new controller log export to establish authentication success and header semantics. Production configuration and plugin code remain unchanged; the candidate and raw reply remain in ignored private storage.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

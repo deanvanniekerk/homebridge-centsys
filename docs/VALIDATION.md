@@ -115,6 +115,12 @@ The new regression first failed on the existing implementation with `command-rej
 
 Protocol regressions cover negotiation success and packet contents, unchanged/different repeated mismatches, other rejections, malformed/missing replies, and changed authorization, cancellation, stale telemetry or target state before the retry. These are synthetic tests of the reference behavior, not evidence that this gate returned code 7. All 49 tests and formatting/build checks passed. Alpha.4 was installed on iHost from a SHA-256-verified tarball; npm changed one package. Physical validation of the negotiation remains pending.
 
+### Alpha.4 observed activation — 10 September 2026
+
+After owner readiness, one HomeKit open request reached the activation response at 10:23:42 UTC. The decoder logged `attempt=1, code=64, configVersion=110`. This does not match the explicit code-7 negotiation condition, so no corrected-version publish occurred. Apple Home returned to Closed, and the owner confirmed no movement. No close request was sent.
+
+The numeric values are decoder output, not independently validated vendor meanings. The pinned reference defines success 1 and configuration mismatch 7; it does not identify code 64. An offline differential comparison of TypeScript identity, versioned TRG and activation-response decoding against the pinned Python module passed with synthetic inputs. This checks the port, not whether the configured key is correct for this controller. A fresh authenticated cloud discovery returned zero rows, so no cloud `macAddress` was available for comparison. The reference uses the device listing's `macAddress`; our manual configuration uses the Pro Wi-Fi screenshot's MAC. Equivalence remains unverified. Future investigation should obtain an independently confirmed operator key source or a private official-app protocol capture, rather than trying alternate keys or commands on the motor.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

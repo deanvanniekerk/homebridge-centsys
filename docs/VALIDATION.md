@@ -225,6 +225,10 @@ Selecting another gate clears the previous identity and control consent. Editing
 
 Regression coverage exercises discovery parsing, the setup API's public field allowlist, and the shipped wizard event handlers, including cross-gate address isolation and empty/error help. No live discovery row with MAC was available for validation, and no gate commands or production configuration changes were made for this work.
 
+### Remote settings screen checked — 10 September 2026
+
+The owner supplied the Remote gate-settings screen captured at 14:18:50 local time. Its four entries are Customise Device, Customise Actions, View Device Admins and Remove Device. No serial or MAC field is shown there. The owner reports using Pro for detailed operator information. This narrows the documented manual workflow to Pro for the known serial/Wi-Fi fields; it does not establish a direct protocol-MAC lookup or prove that every other app screen lacks one. No screenshot or identifying label is copied into the public repository.
+
 ## Remaining before routine Homebridge control
 
 Characterize delayed live telemetry after an outage with official apps closed before the test and no competing diagnostic session. The installed plugin eventually recovered without a restart, but latency and cause remain unresolved. Also verify monitoring/control handover on hardware. Then assess reliability beyond the first successful cycle. Transport-failure recovery, local stale reads and target reconciliation have controlled test coverage. Apple Home has displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

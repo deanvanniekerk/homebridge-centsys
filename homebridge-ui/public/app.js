@@ -15,7 +15,7 @@
   async function task(fn) {
     if (busy) return;
     busy = true;
-    document.querySelectorAll("button").forEach((b) => {
+    document.querySelectorAll("button, input, select").forEach((b) => {
       b.disabled = true;
     });
     try {
@@ -26,7 +26,7 @@
       );
     } finally {
       busy = false;
-      document.querySelectorAll("button").forEach((b) => {
+      document.querySelectorAll("button, input, select").forEach((b) => {
         b.disabled = false;
       });
     }
@@ -47,7 +47,7 @@
         timeout:
           "Verification timed out. Leave the gate Wi-Fi on, close the official apps and allow reconnection time before trying again.",
         "control-disabled":
-          "This Wi-Fi address helper supports D5 Evo SMART+ in South Africa only.",
+          "Address verification is unavailable for this model or region.",
         "state-unavailable":
           "No usable live status was verified. The candidate address was not applied.",
         configuration:
@@ -76,6 +76,9 @@
           ? "Sign-in required. Your saved session was rejected."
           : "Not signed in.";
     el("logout").hidden = result.state === "signed-out";
+    el("account-details").open = result.state !== "signed-in";
+    el("account-summary").textContent =
+      result.state === "signed-in" ? "Change account" : "Account sign-in";
   }
   function option(select, value, label) {
     const node = document.createElement("option");
@@ -85,8 +88,9 @@
   }
   function clearDiscovery() {
     discovered = [];
+    el("discovery-results").hidden = true;
     el("discovered").replaceChildren();
-    option(el("discovered"), "", "Choose a discovered gate");
+    option(el("discovered"), "", "Choose a gate");
   }
   function saved(selected = "") {
     el("configured").replaceChildren();
@@ -103,12 +107,11 @@
       el("mac").value = "";
       el("mac-source").textContent =
         "Details changed. Verify the Wi-Fi address again.";
-      el("enable-control").checked = false;
-      el("trigger-confirmed").checked = false;
     }
     wifiVerified = false;
   }
   function loadGate() {
+    notify("");
     invalidateWifiCheck();
     el("wifi-mac").value = "";
     el("wifi-model-confirmed").checked = false;
@@ -117,8 +120,10 @@
     el("gate-name").value = g.name || "Gate";
     el("serial").value = g.serialNumber || "";
     el("mac").value = g.macAddress || "";
-    el("enable-control").checked = g.enableControl === true;
-    el("trigger-confirmed").checked = g.triggerModeConfirmed === true;
+    // New gates default on; loading an existing gate preserves its saved choice.
+    el("enable-control").checked = selected === "" || g.enableControl === true;
+    el("address-mode").value = g.macAddress ? "protocol" : "wifi";
+    showAddressMode();
     el("remove-gate").hidden = selected === "";
     el("gate-state").textContent = "";
     el("discovered").value = "";
@@ -126,6 +131,18 @@
       ? "Saved address for this gate."
       : "";
   }
+  function showAddressMode() {
+    const wifi = el("address-mode").value === "wifi";
+    el("wifi-helper").hidden = !wifi;
+    el("protocol-entry").hidden = wifi;
+  }
+  el("address-mode").addEventListener("change", () => {
+    invalidateWifiCheck();
+    el("mac").value = "";
+    el("mac-source").textContent = "";
+    el("gate-state").textContent = "";
+    showAddressMode();
+  });
   async function saveConfig(nextGates) {
     const next = [...configs];
     const block = {
@@ -148,7 +165,7 @@
       (g) => g.serialNumber === el("discovered").value,
     );
     if (!device) return;
-    // A new selection must never inherit another gate's identity or control consent.
+    // A new selection must never inherit another gate's identity or saved control setting.
     const existing = gates.findIndex(
       (g) => g.serialNumber === device.serialNumber,
     );
@@ -158,11 +175,13 @@
     el("serial").value = device.serialNumber;
     // Preserve an explicitly saved address for the same gate when discovery omits it.
     if (device.macAddress) el("mac").value = device.macAddress;
+    el("address-mode").value = el("mac").value ? "protocol" : "wifi";
+    showAddressMode();
     el("mac-source").textContent = device.macAddress
-      ? "Protocol MAC supplied by account discovery."
+      ? "Address filled from your account."
       : el("mac").value
-        ? "Discovery omitted the MAC; using this gate's saved address."
-        : "Discovery did not supply a protocol MAC. See manual setup help below.";
+        ? "Using this gate’s saved address."
+        : "Enter the Wi-Fi MAC from Pro and verify it.";
     if (!el("mac").value) el("manual-help").open = true;
     el("gate-state").textContent = "";
   });
@@ -172,15 +191,15 @@
     el("discovered").value = "";
     el("mac").value = "";
     el("mac-source").textContent =
-      "Serial changed. Enter the address for this gate.";
-    el("enable-control").checked = false;
-    el("trigger-confirmed").checked = false;
+      "Serial changed. Set up the address for this gate.";
+    el("wifi-mac").value = "";
+    el("address-mode").value = "wifi";
+    showAddressMode();
   });
   el("mac").addEventListener("input", () => {
     identityRevision++;
     wifiVerified = false;
-    el("mac-source").textContent =
-      "Manually entered address; cloud status does not validate it.";
+    el("mac-source").textContent = "Using a manually entered protocol address.";
   });
   el("wifi-mac").addEventListener("input", invalidateWifiCheck);
   el("wifi-model-confirmed").addEventListener("change", invalidateWifiCheck);
@@ -196,13 +215,13 @@
           !/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(wifiMacAddress)
         ) {
           notify(
-            "Enter the full controller serial and Wi-Fi MAC from Pro, and confirm D5 Evo SMART+.",
+            "Enter the serial and Wi-Fi MAC, then confirm the model checkbox.",
           );
           return;
         }
         const revision = identityRevision;
         notify(
-          "Verifying one candidate address and waiting for live status. This can take up to 30 seconds. No open/close command is sent.",
+          "Verifying address… Allow up to 30 seconds. The gate will not move.",
         );
         const result = await request("/gate/verify-wifi", {
           serialNumber,
@@ -233,15 +252,10 @@
         }
         el("mac").value = result.macAddress;
         wifiVerified = true;
-        el("enable-control").checked = false;
-        el("trigger-confirmed").checked = false;
-        el("mac-source").textContent =
-          "Candidate verified by controller identity and fresh live status.";
-        el("gate-state").textContent =
-          `Live state at verification: ${result.state}.`;
-        notify(
-          "Address verified and filled in. Review the gate and save; open/close control remains off.",
-        );
+
+        el("mac-source").textContent = "Address verified. Ready to save.";
+        el("gate-state").textContent = `Gate status: ${result.state}.`;
+        notify("Address verified. Save your gate below.");
       }),
   );
   el("login-form").addEventListener("submit", (event) => {
@@ -298,37 +312,24 @@
     "click",
     () =>
       void task(async () => {
-        discovered = [];
-        el("discovered").replaceChildren();
+        clearDiscovery();
         const result = await request("/devices");
         if (result.failed) {
           el("manual-help").open = true;
           return;
         }
         discovered = result;
-        option(el("discovered"), "", "Choose a discovered gate");
+        el("discovery-results").hidden = !result.length;
+        option(el("discovered"), "", "Choose a gate");
         result.forEach((g) =>
           option(el("discovered"), g.serialNumber, g.label),
         );
         if (!result.length) el("manual-help").open = true;
         notify(
           result.length
-            ? "Select a gate to fill its serial and available protocol MAC, then check its status."
-            : "No account gates were returned. Follow the manual setup help below; an empty list does not mean your gate is offline.",
+            ? "Choose a gate below."
+            : "No gates found. Use the Pro instructions below to add yours.",
         );
-      }),
-  );
-  el("check-gate").addEventListener(
-    "click",
-    () =>
-      void task(async () => {
-        const result = await request("/gate/check", {
-          serialNumber: el("serial").value.trim(),
-        });
-        if (result.failed) return;
-        el("gate-state").textContent = result.found
-          ? `Cloud-reported state: ${result.state}.`
-          : "No overview returned for this serial. Check it against Pro.";
       }),
   );
   el("gate-form").addEventListener("submit", (event) => {
@@ -337,12 +338,12 @@
       const serialNumber = el("serial").value.trim().toUpperCase();
       const enableControl = el("enable-control").checked;
       const macAddress = el("mac").value.trim().toUpperCase();
-      if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(macAddress)) {
-        notify("Live monitoring requires the gate protocol MAC address.");
+      if (el("address-mode").value === "wifi" && !wifiVerified) {
+        notify("Verify the Wi-Fi MAC before saving.");
         return;
       }
-      if (enableControl && !el("trigger-confirmed").checked) {
-        notify("Control requires confirmation of TRG behaviour.");
+      if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(macAddress)) {
+        notify("Set up the gate address before saving.");
         return;
       }
       const checked = await request("/gate/check", { serialNumber });
@@ -371,9 +372,7 @@
         serialNumber,
         enableControl,
         ...(macAddress ? { macAddress } : {}),
-        ...(enableControl
-          ? { controlProfile: "d5-evo-smart-plus", triggerModeConfirmed: true }
-          : {}),
+        ...(enableControl ? { controlProfile: "d5-evo-smart-plus" } : {}),
       };
       const next = [...gates];
       const target = selected === "" ? next.length : Number(selected);

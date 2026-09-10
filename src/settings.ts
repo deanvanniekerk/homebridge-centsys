@@ -59,9 +59,7 @@ export function parseConfig(value: unknown): CentsysConfig {
     // Command profile is intentionally narrow; numeric product codes cannot identify the family.
     if (
       enableControl &&
-      (!macAddress ||
-        g.controlProfile !== "d5-evo-smart-plus" ||
-        g.triggerModeConfirmed !== true)
+      (!macAddress || g.controlProfile !== "d5-evo-smart-plus")
     )
       throw new CentsysError("configuration");
     return {

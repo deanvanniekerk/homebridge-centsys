@@ -189,7 +189,7 @@ test("HomeKit acknowledges a queued command before delayed telemetry and reports
   );
   assert.equal(commands, 1);
 });
-test("configuration requires explicit supported control profile, MAC and trigger-mode confirmation", () => {
+test("configuration requires the supported control profile and MAC, without a TRG checkbox", () => {
   assert.equal(parseConfig(config).gates[0].enableControl, false);
   for (const extra of [
     { enableControl: true },

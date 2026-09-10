@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. The first public release, alpha.8, is now available on npm.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. The first public release, alpha.8, is now available on npm.
 
 ## Requirements and package
 
@@ -13,13 +13,15 @@ From a development checkout, `npm ci`, `npm run check` and `npm pack` produce th
 
 Use `npm install homebridge-centsys@alpha` in the same Homebridge npm environment. Choose the alpha version explicitly when installing through a version-selection UI. The initial release is experimental and has no stable release recommendation. Alpha.8 changes release metadata and documentation; its gate logic matches the alpha.7 build tested on iHost.
 
-## Browser setup
+## Browser setup (next update: alpha.9)
 
-1. Enter the MyCentsys account's international phone number, region, and WhatsApp/SMS preference; click **Send code**.
-2. Enter the received OTP and click **Sign in**. Keep the settings modal open until this completes.
-3. Click **Find account gates** and select an entry. Setup fills its serial and the protocol MAC when the listing supplies a valid `macAddress`. Missing or invalid addresses remain unfilled; the plugin does not substitute a Wi-Fi MAC. If discovery fails or returns no gates, the wizard opens **Manual setup**; follow the instructions below.
-4. Set the Home name and validated **protocol MAC address**, click **Check gate status**, then **Save gate**. Start with control disabled. The status button is a cloud preview; runtime availability also requires live telemetry. Monitoring currently supports the tested D5 Evo SMART+ profile in South Africa.
-5. Restart the plugin's child bridge or Homebridge. Add the bridge/accessory in Apple Home using Homebridge's normal pairing process.
+1. Sign in with your MyCentsys phone number and the WhatsApp/SMS code.
+2. Click **Find my gates** and select your gate. If none appears, follow **Gate not found? Get its details from MyCentsys Pro**.
+3. For manual setup, enter the serial and **Wi-Fi MAC from Pro**, confirm the model, close Pro and Remote, and click **Verify address**. Verification does not move the gate.
+4. Set the Home name and click **Save gate**. Opening and closing is on for new gates; switch it off for monitoring only. Existing saved settings are preserved.
+5. Restart the CENTSYS child bridge, then pair it with Apple Home if needed.
+
+The default address path accepts the Wi-Fi MAC copied from Pro and verifies the corresponding protocol address. **Use a protocol MAC (advanced)** is only for a discovered or previously verified protocol address. These are different addresses: do not enter Pro's Wi-Fi MAC in the advanced field.
 
 The plugin's server prepares the pinned bootstrap credential on the first explicit code request. No shell command or token copying is required for UI setup. This remains an unofficial protocol dependency: the file hash must match the pinned source, and a vendor change can require a plugin update.
 
@@ -29,7 +31,7 @@ The UI process owns a short-lived login challenge, allows up to five code-verifi
 
 An empty result does not mean the gate is offline or that sign-in failed. On the investigated account, the cloud accepted authentication and manual gate access worked while discovery returned no entries. Fixing controller MQTT authentication did not change that cloud result. Automatic filling is implemented and covered with simulated discovery responses; successful discovery has not yet been observed on this installation.
 
-Check that the Homebridge login uses the same international phone number and region as **MyCentsys Remote**. In **MyCentsys Pro**, connect to the operator and open **Users → MyCentsys Remote**. Confirm the number is present and enabled; the adjacent **Operator Admins** list is a separate role. In Remote, locate **SMART Settings → SMART Plus Retrieval**, run it, and try **Find account gates** again. This retrieval screen and the two user lists were observed in the supplied app screenshots. Retrieval may still return nothing even when a manually added gate works. Do not delete and re-add a working gate just to follow this guide.
+Check that the Homebridge login uses the same international phone number and region as **MyCentsys Remote**. In **MyCentsys Pro**, connect to the operator and open **Users → MyCentsys Remote**. Confirm the number is present and enabled; the adjacent **Operator Admins** list is a separate role. In Remote, locate **SMART Settings → SMART Plus Retrieval**, run it, and try **Find my gates** again. This retrieval screen and the two user lists were observed in the supplied app screenshots. Retrieval may still return nothing even when a manually added gate works. Do not delete and re-add a working gate just to follow this guide.
 
 ### Copy the serial from MyCentsys Pro
 
@@ -39,16 +41,16 @@ These screen labels were observed in Pro **1.5.0.213**; navigation can differ by
 2. Select and connect to the operator. Open its settings and locate **Operator Information**.
 3. Find **Serial Number** and tap the copy icon next to it. Copy the entire **24-character** value, including leading zeroes.
 4. Paste it into **Controller serial number** in Homebridge. The operator name, model, IP address and short device labels are not substitutes.
-5. Click **Check gate status**. A returned cloud state confirms a status response for that serial; it does **not** validate the MAC or establish live connectivity.
+5. Continue with Wi-Fi address verification below. A cloud status response alone does not validate the MAC or establish live connectivity.
 
-### Verify a Wi-Fi MAC from Pro (experimental D5 Evo SMART+ helper)
+### Verify a Wi-Fi MAC from Pro
 
 1. In Pro's **Operator Information**, confirm the exact model is **D5 Evo SMART+**. This helper currently supports that model in **South Africa** only.
 2. While connected in Pro, open **Wi-Fi Settings**. Scroll to **Advanced Wi-Fi Information → MAC Address** and copy the six hexadecimal byte pairs.
-3. In Homebridge, expand **Use the Wi-Fi MAC from Pro (D5 Evo SMART+ only)** and paste this into **Wi-Fi MAC from Pro**. Do not paste it into **Gate protocol MAC address**: the two differed on the tested controller.
+3. In Homebridge, leave **Set up the gate address** on **Use Wi-Fi MAC from MyCentsys Pro** and paste this into **Wi-Fi MAC from Pro**. Do not use the advanced protocol-address option for this value.
 4. Confirm the model checkbox. Keep the gate's Wi-Fi enabled and connected to the cloud, then close Pro and Remote. If upgrading an existing installation, restart the child bridge after installing alpha.7 or later before using the helper.
-5. Click **Verify Wi-Fi address (no movement)**. The helper tries one candidate and waits up to 30 seconds for accepted controller identity authentication and fresh, non-retained live status. It sends no time-sync or open/close command.
-6. On success, the wizard fills **Gate protocol MAC address** and shows the live state observed during verification. Review the details and click **Save gate** separately. Control remains disabled; restart the child bridge to apply the saved configuration.
+5. Click **Verify address**. The helper tries one candidate and waits up to 30 seconds for accepted controller identity authentication and fresh, non-retained live status. It sends no time-sync or open/close command.
+6. On success, the wizard stores the verified address in the form and shows the live state. Click **Save gate**, then restart the child bridge. Verification preserves your control choice; new gates default to control on.
 
 This candidate calculation adds two to the full Wi-Fi address and reverses its byte order. It is based on the address relationship observed on one installation, not a universal CENTSYS rule. The helper only returns the candidate after live verification succeeds; it does not scan alternatives, save unverified candidates or retry automatically. Changing the serial, Wi-Fi MAC or model confirmation invalidates a result generated by the helper.
 
@@ -80,9 +82,9 @@ The default idle poll is 15 seconds. A newly observed moving state or control re
 
 Obstruction remains **unknown internally** unless fresh MQTT telemetry supports a known result. HomeKit requires a Boolean: the plugin reports `true` only for a detected obstruction, otherwise `false` means **no obstruction reported**, not a confirmed clear path. Disabled or missing beam feedback is not a safety measurement. Actual unavailable/stale gate state still returns a communication error. Alpha.0 incorrectly returned that error for missing obstruction feedback even while the gate state was readable, producing an Apple Home No Response report; alpha.1 corrects this presentation mapping without changing command checks. See [Apple’s obstruction characteristic definition](https://developer.apple.com/documentation/homekit/hmcharacteristictypeobstructiondetected).
 
-## Experimental control
+## Open/close control
 
-The default is monitoring only. The advanced UI option requires a D5 Evo SMART+ in South Africa, its protocol MAC address, and confirmation that the installed TRG mode opens a fully closed gate and closes a fully open one. Use the cloud device listing's `macAddress`, an address verified by the helper above, or an independently validated protocol address. The Wi-Fi MAC displayed by MyCentsys Pro was not the correct key source on the investigated installation; do not assume the two addresses are interchangeable or apply the observed conversion to every controller. Other motor families/regions are not supported for activation in this alpha.
+New gates configured through the alpha.9 wizard default to control on. Existing saved off settings, including legacy configurations with no enableControl value, remain off. The UI saves enableControl explicitly and selects the supported control profile. There is no TRG confirmation checkbox; the page explains that control uses the normal open/close trigger. Control requires a D5 Evo SMART+ in South Africa and its protocol MAC address. The installed TRG mode must open a fully closed gate and close a fully open one. Use the cloud device listing's `macAddress`, an address verified by the helper above, or an independently validated protocol address. The Wi-Fi MAC displayed by MyCentsys Pro was not the correct key source on the investigated installation; do not assume the two addresses are interchangeable or apply the observed conversion to every controller. Other motor families/regions are not supported for activation in this alpha.
 
 Each request obtains a new MQTT identity challenge and non-retained telemetry over verified mutual TLS. Matching endpoints/directions are no-ops; opposing motion, intermediate/unknown state, known obstruction or reported inhibiting conditions reject the request. Unknown obstruction is not proof of a clear driveway; enabling control does not establish the installation's safety equipment or suitability for unattended closing.
 

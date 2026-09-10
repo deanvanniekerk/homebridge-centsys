@@ -4,7 +4,7 @@ import { record } from "./protocol.js";
 
 export const PLUGIN_NAME = "homebridge-centsys";
 export const PLATFORM_NAME = "Centsys";
-export const VERSION = "0.1.0-alpha.2";
+export const VERSION = "0.1.0-alpha.3";
 export const storageDirectory = (root: string) => join(root, "centsys", "auth");
 
 export interface GateConfig {

@@ -9,7 +9,7 @@ This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wiz
 - Internet access from Homebridge to CENTSYS HTTPS and MQTT services, and GitHub for first-login bootstrap preparation.
 - Homebridge storage mounted on persistent disk. For containers, persist the Homebridge storage volume, not the plugin's install directory.
 
-From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.2.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
+From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.3.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
 
 ## Browser setup
 

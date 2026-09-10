@@ -29,6 +29,7 @@ function broker({
   onActivate,
   retain = false,
   beforeTimeAck,
+  timeReply = header(6),
 } = {}) {
   const client = new EventEmitter();
   const sent = [];
@@ -60,7 +61,7 @@ function broker({
         incoming("deviceOverview", telemetry());
       } else if (data[2] === 5) {
         beforeTimeAck?.(incoming);
-        incoming("userRemoteTriggerResponse", header(6));
+        incoming("userRemoteTriggerResponse", timeReply);
       } else if (data[2] === 3) {
         onActivate?.();
         if (!dropAck) {
@@ -138,6 +139,31 @@ test("activation is single QoS 0 publish; rejection and lost acknowledgement nev
     assert.equal(commands.length, 1);
     assert.equal(commands[0].opts.qos, 0);
     assert.equal(commands[0].opts.retain, false);
+  }
+});
+test("observed eight-byte time reply reaches the pre-activation check without relaxing other headers", async () => {
+  for (const [flag, length, reachesCheck] of [
+    [0x20, 8, true],
+    [0x20, 4, false],
+    [0x40, 8, false],
+  ]) {
+    const reply = Buffer.alloc(length);
+    reply.set([1, 1, 6, flag]);
+    const b = broker({ timeReply: reply });
+    let checked = false;
+    await assert.rejects(
+      gateSession({
+        ...options,
+        connect: b.connect,
+        target: "open",
+        beforeActivation: async () => {
+          checked = true;
+          throw new Error("Blocked by test");
+        },
+      }),
+    );
+    assert.equal(checked, reachesCheck);
+    assert.equal(b.sent.filter((p) => p.data[2] === 3).length, 0);
   }
 });
 test("already satisfied target, retained responses, logout check and changed gate state prevent activation", async () => {

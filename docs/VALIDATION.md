@@ -95,6 +95,14 @@ A read-only diagnostic using the installed session on iHost completed certificat
 
 Alpha.2 acknowledges accepted HomeKit commands promptly and runs one bounded command job. It keeps a 30-second overall deadline, the existing 25-second MQTT limit, fresh-state requirements and no activation retries. Current state remains observed; a requested target is stored separately. Tests reproduce the old blocking HAP write and verify prompt acknowledgement, later failure reporting, busy rejection, deadline cancellation and shutdown. All 45 tests passed, and alpha.2 was installed from a checksum-verified tarball on iHost with a CENTSYS-only child bridge restart. Physical actuation through the revised path remains pending.
 
+### Time-reply envelope correction — 10 September 2026
+
+The owner confirmed readiness for a second HomeKit open request on alpha.2. It also timed out before activation; the owner confirmed no movement, and Home returned to Closed. No close request or automatic activation retry was sent.
+
+A diagnostic with activation explicitly blocked traced the installed client through identity, telemetry and time sync. It received a 68-byte overview at 13.815 seconds, sent command 05 at 13.822 seconds, and received an eight-byte command-06 reply at 13.911 seconds. The session nevertheless timed out. A header-only follow-up identified the reply envelope as `01 01 06 20`; the parser required byte 3 to be zero. The meaning of that header byte is not independently established. No account identifier, challenge, certificate or payload body is included in these notes.
+
+Alpha.3 recognizes this exact eight-byte command-06 envelope in addition to the existing zero-byte variant. Identity and activation response parsing remain unchanged, as do the fresh-state check, account recheck and single-publish rule. Synthetic tests reproduce the rejected envelope and verify that different flags or lengths cannot advance to activation. All 46 tests passed. A checksum-verified alpha.3 tarball was installed on iHost. A probe using that installed code received telemetry at 13.904 seconds and command 06 at 14.051 seconds, then reached the final pre-activation callback at 14.053 seconds. The callback deliberately stopped the session; a second publish guard independently blocked command 03. The probe completed with `activated: false`. Only the CENTSYS child bridge was restarted, its log confirmed alpha.3, and Apple Home remained Closed. This verifies progress through the handshake, not command acceptance or physical movement; those still require an owner-observed test.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

@@ -61,7 +61,10 @@ export function isResponse(data: Buffer, type: number): boolean {
     data[0] === 1 &&
     data[1] === 1 &&
     data[2] === type &&
-    data[3] === 0
+    // D5 Evo SMART+ 2.1.0.0 returns an eight-byte cmd-06 envelope
+    // with byte 3 set to 0x20. This identifies a time reply, not proof
+    // of activation; keep identity and activation response checks strict.
+    (data[3] === 0 || (type === 6 && data[3] === 0x20 && data.length === 8))
   );
 }
 export function challengeFrom(data: Buffer): Buffer {

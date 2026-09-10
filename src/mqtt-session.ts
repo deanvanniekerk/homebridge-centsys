@@ -94,29 +94,37 @@ export async function gateSession(options: Options): Promise<MqttResult> {
       done = true;
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", aborted);
+      const settle = () => {
+        if (error)
+          reject(
+            awaitingOutcome && error.code !== "command-rejected"
+              ? new CentsysError("command-uncertain")
+              : error,
+          );
+        else if (live) resolve({ live, activated });
+        else reject(new CentsysError("protocol"));
+      };
       if (client?.connected && operatorConnected) {
-        // Release the operator's temporary telemetry session; bounded cleanup must not delay HAP.
+        // Do not hand the shared account client ID to another session before teardown.
         const closingClient = client;
-        const cleanup = setTimeout(() => closingClient.end(true), 250);
-        cleanup.unref();
+        const cleanup = setTimeout(() => {
+          closingClient.end(true);
+          settle();
+        }, 250);
         closingClient.publish(
           topic("disconnect"),
           Buffer.alloc(0),
           { qos: 0, retain: false, properties: props("disconnect") },
-          () => {
-            clearTimeout(cleanup);
-            closingClient.end(true);
-          },
+          () =>
+            closingClient.end(true, {}, () => {
+              clearTimeout(cleanup);
+              settle();
+            }),
         );
-      } else client?.end(true);
-      if (error)
-        reject(
-          awaitingOutcome && error.code !== "command-rejected"
-            ? new CentsysError("command-uncertain")
-            : error,
-        );
-      else if (live) resolve({ live, activated });
-      else reject(new CentsysError("protocol"));
+      } else {
+        client?.end(true);
+        settle();
+      }
     };
     const aborted = () => finish(new CentsysError("cancelled"));
     const timer = setTimeout(

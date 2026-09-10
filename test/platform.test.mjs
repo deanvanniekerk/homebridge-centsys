@@ -308,3 +308,71 @@ test("HomeKit reports failed reads unavailable and recovers all required charact
       hap.HAPStatus.SUCCESS,
     );
 });
+
+test("live-proof expiry pushes HomeKit unavailable despite continued cached HTTPS success", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  let proof = 100000;
+  const api = Object.assign(new EventEmitter(), {
+    hap,
+    platformAccessory: PlatformAccessory,
+    user: { storagePath: () => "/unused" },
+    registerPlatformAccessories: (_p, _n, a) => {
+      api.registered = a;
+    },
+    updatePlatformAccessories: () => {},
+    unregisterPlatformAccessories: () => {},
+  });
+  new CentsysPlatform(
+    { info: () => {}, warn: () => {}, error: (m) => assert.fail(m) },
+    config,
+    api,
+    {
+      gateway: {
+        read: async () => [
+          { serialNumber, state: "closed", liveVerifiedAt: proof },
+        ],
+        activate: async () =>
+          assert.fail("No commands during expiry or recovery"),
+      },
+    },
+  );
+  t.after(() => api.emit("shutdown"));
+  const flush = () => new Promise((r) => setImmediate(r));
+  api.emit("didFinishLaunching");
+  await flush();
+  const service = api.registered[0].getService(hap.Service.GarageDoorOpener);
+  const types = [
+    hap.Characteristic.CurrentDoorState,
+    hap.Characteristic.TargetDoorState,
+    hap.Characteristic.ObstructionDetected,
+  ];
+  for (let i = 0; i < 3; i++) {
+    t.mock.timers.tick(15000);
+    await flush();
+  }
+  t.mock.timers.tick(1);
+  await flush();
+  for (const type of types) {
+    const characteristic = service.getCharacteristic(type);
+    assert.equal(
+      characteristic.statusCode,
+      hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+      "expiry must push an error without a HomeKit read",
+    );
+    await assert.rejects(characteristic.handleGetRequest());
+  }
+  proof = Date.now();
+  t.mock.timers.tick(15000);
+  await flush();
+  for (const type of types)
+    assert.equal(
+      service.getCharacteristic(type).statusCode,
+      hap.HAPStatus.SUCCESS,
+    );
+  assert.equal(
+    await service
+      .getCharacteristic(hap.Characteristic.CurrentDoorState)
+      .handleGetRequest(),
+    1,
+  );
+});

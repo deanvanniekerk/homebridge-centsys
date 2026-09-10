@@ -33,14 +33,17 @@ function broker({
   activationReplies,
   identityStatus = 1,
   identityHeader = 0,
+  beforeEnd,
 } = {}) {
   const client = new EventEmitter();
   const sent = [];
   let ended = false;
   let activationCount = 0;
-  client.end = () => {
+  client.end = (_force, _opts, callback) => {
     ended = true;
     client.connected = false;
+    if (callback && beforeEnd) beforeEnd(callback);
+    else callback?.();
   };
   client.subscribe = (topics, _opts, cb) =>
     queueMicrotask(() =>
@@ -334,4 +337,29 @@ test("observed identity header is accepted only with a successful decoded identi
     else await assert.rejects(p, (e) => e.code === "gate-authentication");
     assert.equal(b.sent.filter((p) => [3, 5].includes(p.data[2])).length, 0);
   }
+});
+
+test("a finished monitor waits for MQTT teardown before releasing its result", async () => {
+  let release;
+  let ending;
+  const ended = new Promise((resolve) => {
+    ending = resolve;
+  });
+  const b = broker({
+    beforeEnd: (callback) => {
+      release = callback;
+      ending();
+    },
+  });
+  let settled = false;
+  const result = gateSession({ ...options, connect: b.connect }).then(
+    (value) => {
+      settled = true;
+      return value;
+    },
+  );
+  await ended;
+  assert.equal(settled, false);
+  release();
+  assert.equal((await result).activated, false);
 });

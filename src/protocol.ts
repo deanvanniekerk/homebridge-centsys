@@ -1,5 +1,8 @@
 import { CentsysError } from "./errors.js";
 
+export const LIVE_REFRESH_MS = 20_000;
+export const LIVE_EXPIRY_MS = 45_000;
+
 export type Region = "za" | "au";
 export type GateState =
   | "unknown"
@@ -19,6 +22,8 @@ export interface Device {
 }
 
 export interface Overview {
+  /** Local receipt of independently verified live controller telemetry, never HTTPS receipt. */
+  liveVerifiedAt?: number;
   serialNumber: string;
   state: GateState;
   stateCode: number | null;

@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { CentsysError } from "./errors.js";
 import type { ErrorCode } from "./errors.js";
 import type { GateState, Overview } from "./protocol.js";
+import { LIVE_REFRESH_MS, LIVE_EXPIRY_MS } from "./protocol.js";
 import type { GateConfig } from "./settings.js";
 import type { LiveState, Target } from "./mqtt-codec.js";
 
@@ -15,6 +16,7 @@ export interface Gateway {
   ): Promise<{ live: LiveState; activated: boolean }>;
 }
 export interface Snapshot {
+  liveVerifiedAt?: number;
   state: GateState;
   receivedAt: number;
   obstruction: boolean | null;
@@ -26,6 +28,7 @@ export class GateCoordinator extends EventEmitter {
   readonly #abort = new AbortController();
   readonly #snapshots = new Map<string, Snapshot>();
   #timer: ReturnType<typeof setTimeout> | undefined;
+  #expiryTimer: ReturnType<typeof setTimeout> | undefined;
   #poll: Promise<void> | undefined;
   #command = false;
   #generation = 0;
@@ -42,10 +45,7 @@ export class GateCoordinator extends EventEmitter {
   }
   snapshot(serial: string): Snapshot {
     const value = this.#snapshots.get(serial);
-    if (
-      !value ||
-      Date.now() - value.receivedAt > Math.max(45_000, this.pollInterval * 2000)
-    )
+    if (!value || Date.now() > this.#expiresAt(value))
       return {
         state: "unknown",
         receivedAt: 0,
@@ -67,12 +67,36 @@ export class GateCoordinator extends EventEmitter {
   close() {
     this.#abort.abort();
     clearTimeout(this.#timer);
+    clearTimeout(this.#expiryTimer);
     this.removeAllListeners();
+  }
+  #expiresAt(value: Snapshot) {
+    return Math.min(
+      value.receivedAt + Math.max(45_000, this.pollInterval * 2000),
+      value.liveVerifiedAt === undefined
+        ? Infinity
+        : value.liveVerifiedAt + LIVE_EXPIRY_MS,
+    );
+  }
+  #updated() {
+    clearTimeout(this.#expiryTimer);
+    if (this.#abort.signal.aborted) return;
+    this.emit("update");
+    const next = Math.min(
+      ...[...this.#snapshots.values()]
+        .filter((value) => !value.error && value.state !== "unknown")
+        .map((value) => this.#expiresAt(value) + 1)
+        .filter((at) => at > Date.now()),
+    );
+    if (Number.isFinite(next)) {
+      this.#expiryTimer = setTimeout(() => this.#updated(), next - Date.now());
+      this.#expiryTimer.unref();
+    }
   }
   async #tick() {
     await this.refresh();
     if (this.#abort.signal.aborted) return;
-    const delay = this.#failures
+    let delay = this.#failures
       ? Math.min(
           300_000,
           this.pollInterval * 1000 * 2 ** Math.min(this.#failures, 5),
@@ -80,6 +104,14 @@ export class GateCoordinator extends EventEmitter {
       : Date.now() < this.#fastUntil
         ? 2000
         : this.pollInterval * 1000;
+    if (!this.#failures) {
+      const due = Math.min(
+        ...[...this.#snapshots.values()]
+          .filter((value) => !value.error && value.liveVerifiedAt !== undefined)
+          .map((value) => value.liveVerifiedAt! + LIVE_REFRESH_MS),
+      );
+      delay = Math.min(delay, Math.max(1, due - Date.now()));
+    }
     clearTimeout(this.#timer);
     this.#timer = setTimeout(() => void this.#tick(), delay);
     this.#timer.unref();
@@ -118,6 +150,9 @@ export class GateCoordinator extends EventEmitter {
         this.#snapshots.set(gate.serialNumber, {
           state,
           receivedAt: Date.now(),
+          ...(row?.liveVerifiedAt === undefined
+            ? {}
+            : { liveVerifiedAt: row.liveVerifiedAt }),
           obstruction: before?.obstruction ?? null,
           obstructionAt: before?.obstructionAt ?? 0,
           ...(target ? { target } : {}),
@@ -139,7 +174,7 @@ export class GateCoordinator extends EventEmitter {
           error: code,
         });
     }
-    this.emit("update");
+    this.#updated();
   }
   #commandGate(serial: string, target: Target): GateConfig {
     if (target !== "open" && target !== "closed")
@@ -166,7 +201,7 @@ export class GateCoordinator extends EventEmitter {
     this.#generation++;
     const before = this.#snapshots.get(serial);
     if (before) this.#snapshots.set(serial, { ...before, target });
-    this.emit("update");
+    this.#updated();
     const deadline = AbortSignal.timeout(30_000);
     const signal = AbortSignal.any([this.#abort.signal, deadline]);
     try {
@@ -176,11 +211,12 @@ export class GateCoordinator extends EventEmitter {
         this.#snapshots.set(serial, {
           state: live.state,
           receivedAt: Date.now(),
+          liveVerifiedAt: Date.now(),
           obstruction: live.obstruction,
           obstructionAt: Date.now(),
           target,
         });
-        this.emit("update");
+        this.#updated();
       });
       if (this.#abort.signal.aborted) throw new CentsysError("cancelled");
       const state = this.#snapshots.get(serial);
@@ -203,7 +239,7 @@ export class GateCoordinator extends EventEmitter {
     } finally {
       this.#command = false;
       this.#cooldownUntil = Date.now() + 5000;
-      this.emit("update");
+      this.#updated();
       // Resume promptly, including after ambiguous outcomes; observations never replay the command.
       if (this.#started && !this.#abort.signal.aborted) {
         clearTimeout(this.#timer);

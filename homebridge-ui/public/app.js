@@ -200,14 +200,12 @@
       const serialNumber = el("serial").value.trim().toUpperCase();
       const enableControl = el("enable-control").checked;
       const macAddress = el("mac").value.trim().toUpperCase();
-      if (
-        enableControl &&
-        (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(macAddress) ||
-          !el("trigger-confirmed").checked)
-      ) {
-        notify(
-          "Control requires the protocol MAC address and confirmation of TRG behaviour.",
-        );
+      if (!/^([0-9A-F]{2}:){5}[0-9A-F]{2}$/.test(macAddress)) {
+        notify("Live monitoring requires the gate protocol MAC address.");
+        return;
+      }
+      if (enableControl && !el("trigger-confirmed").checked) {
+        notify("Control requires confirmation of TRG behaviour.");
         return;
       }
       const checked = await request("/gate/check", { serialNumber });

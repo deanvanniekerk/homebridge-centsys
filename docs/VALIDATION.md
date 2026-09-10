@@ -46,6 +46,24 @@ One-off MQTT probes obtained a client certificate, completed mutually authentica
 
 The production diagnostic CLI now supports `status-known` using private `operator.json`, with exact 24-hex-character validation for this manual SMART+ path. It reports identity source explicitly, preserves unknown discovery metadata, and keeps the ordinary discovery command separate. The MQTT probes remain local experiments; no production MQTT transport is included yet.
 
+### Observed HTTPS state cycle — 10 September 2026
+
+The existing saved session authenticated successfully the following morning. With the corrected manual identity, the agent sampled GetOperatorOverview at a nominal two-second interval for a bounded two-minute window while the owner opened the gate through the official app, paused at fully open, and closed it. Each request completed before the interval delay began, so the actual sample spacing includes HTTP request time. No agent gate commands were sent.
+
+| First received (SAST, UTC+02:00) | Cloud state | HTTPS code |
+| --- | --- | --- |
+| 10:28:22.941 | Closed | 2 |
+| 10:28:51.745 | Opening | 5 |
+| 10:29:02.839 | Open | 1 |
+| 10:29:18.353 | Closing | 6 |
+| 10:29:29.505 | Closed | 2 |
+
+The owner confirmed “no delay, open closed as normal.” This confirms normal physical operation during the test and the absence of a noticeable app-control delay. It does not measure API latency: physical transition times were not independently timestamped. The table records first receipt by our client, not motor event timestamps or precise travel durations.
+
+This demonstrates that HTTPS overview can deliver both moving and endpoint states on this installation. It does not establish a vendor-supported permanent two-second polling rate, immunity to stale backend caches, loss-of-connectivity behavior, or an acceptable control precondition. Keep command handling dependent on independently validated freshness and operating semantics. A low-rate idle poll plus bounded faster observation around activity is a candidate design, not an implemented or validated policy.
+
+A sanitized capture summary is stored in [the state-cycle evidence file](validation/2026-09-10-http-state-cycle.json). Raw local samples contain only request/receipt timestamps, state codes and row presence, and remain under ignored `.local/`.
+
 ## Remaining before Homebridge control
 
-Investigate empty discovery while using the confirmed manual identity; compare HTTP readings against observed gate movement and establish timing; implement MQTT certificate handling and telemetry; validate family-specific activation semantics and target-state reconciliation; then build and test the Homebridge accessory and iHost deployment. No npm release or Homebridge compatibility claim is made by this checkpoint.
+Investigate empty discovery while using the confirmed manual identity; extend the successful HTTP cycle test to establish timing and stale/offline behavior; implement MQTT certificate handling and telemetry; validate family-specific activation semantics and target-state reconciliation; then build and test the Homebridge accessory and iHost deployment. No npm release or Homebridge compatibility claim is made by this checkpoint.

@@ -1,0 +1,54 @@
+{
+  "source": "https-cloud-overview",
+  "identitySource": "owner-configured",
+  "controllerModel": "D5 Evo SMART+",
+  "coreFirmware": "2.1.0.0",
+  "commsFirmware": "2.1.0.0",
+  "nominalDelayBetweenRequestsMs": 2000,
+  "sampleCount": 55,
+  "firstRequestAt": "2026-09-10T08:28:22.589Z",
+  "lastReceivedAt": "2026-09-10T08:30:22.736Z",
+  "errorCount": 0,
+  "agentActuation": false,
+  "physicalCycleConfirmedByOwner": true,
+  "ownerReportedAppDelay": false,
+  "physicalTransitionTimestampsKnown": false,
+  "deviceMeasurementTimestampsKnown": false,
+  "transitions": [
+    {
+      "requestAt": "2026-09-10T08:28:22.589Z",
+      "receivedAt": "2026-09-10T08:28:22.941Z",
+      "state": "closed",
+      "stateCode": 2,
+      "overviewReceived": true
+    },
+    {
+      "requestAt": "2026-09-10T08:28:51.535Z",
+      "receivedAt": "2026-09-10T08:28:51.745Z",
+      "state": "opening",
+      "stateCode": 5,
+      "overviewReceived": true
+    },
+    {
+      "requestAt": "2026-09-10T08:29:02.625Z",
+      "receivedAt": "2026-09-10T08:29:02.839Z",
+      "state": "open",
+      "stateCode": 1,
+      "overviewReceived": true
+    },
+    {
+      "requestAt": "2026-09-10T08:29:18.141Z",
+      "receivedAt": "2026-09-10T08:29:18.353Z",
+      "state": "closing",
+      "stateCode": 6,
+      "overviewReceived": true
+    },
+    {
+      "requestAt": "2026-09-10T08:29:29.241Z",
+      "receivedAt": "2026-09-10T08:29:29.505Z",
+      "state": "closed",
+      "stateCode": 2,
+      "overviewReceived": true
+    }
+  ]
+}

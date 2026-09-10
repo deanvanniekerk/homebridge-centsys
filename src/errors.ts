@@ -24,7 +24,7 @@ const messages: Record<ErrorCode, string> = {
   "command-uncertain":
     "The activation outcome is unknown. Check the gate before retrying.",
   "command-rejected":
-    "The gate rejected the activation. No automatic retry was sent.",
+    "The gate rejected the activation. No further command was sent.",
   configuration: "Invalid configuration or input.",
   authentication: "Authentication was rejected. Sign in again.",
   "otp-rejected": "The one-time code was rejected.",

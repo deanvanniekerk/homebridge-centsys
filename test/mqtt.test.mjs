@@ -30,10 +30,12 @@ function broker({
   retain = false,
   beforeTimeAck,
   timeReply = header(6),
+  activationReplies,
 } = {}) {
   const client = new EventEmitter();
   const sent = [];
   let ended = false;
+  let activationCount = 0;
   client.end = () => {
     ended = true;
   };
@@ -63,12 +65,23 @@ function broker({
         beforeTimeAck?.(incoming);
         incoming("userRemoteTriggerResponse", timeReply);
       } else if (data[2] === 3) {
-        onActivate?.();
+        activationCount++;
+        onActivate?.(activationCount, incoming);
         if (!dropAck) {
           const k = Buffer.from("9223f3674dbfab9c", "hex");
+          const reply = activationReplies?.[activationCount - 1];
+          if (activationReplies && reply === undefined) return;
           incoming(
             "userRemoteTriggerResponse",
-            header(4, Buffer.from([k[0], k[1] ^ (reject ? 7 : 1)])),
+            reply instanceof Buffer
+              ? reply
+              : header(
+                  4,
+                  Buffer.from([
+                    k[0] ^ (reply?.version ?? 0),
+                    k[1] ^ (reply?.code ?? (reject ? 7 : 1)),
+                  ]),
+                ),
           );
         }
       }
@@ -189,5 +202,106 @@ test("already satisfied target, retained responses, logout check and changed gat
     if (mode === "satisfied") assert.equal((await p).activated, false);
     else await assert.rejects(p);
     assert.equal(b.sent.filter((x) => x.data[2] === 3).length, 0);
+  }
+});
+
+test("configuration mismatch negotiates one corrected version and preserves response diagnostics", async () => {
+  const replies = [
+    { code: 7, version: 9 },
+    { code: 1, version: 9 },
+  ];
+  const b = broker({ activationReplies: replies });
+  const observed = [];
+  let checks = 0;
+  const r = await gateSession({
+    ...options,
+    target: "open",
+    connect: b.connect,
+    beforeActivation: async () => {
+      checks++;
+    },
+    onActivationResponse: (reply) => observed.push(reply),
+  });
+  assert.equal(r.activated, true);
+  assert.equal(checks, 2);
+  assert.deepEqual(
+    observed,
+    replies.map((r, i) => ({
+      code: r.code,
+      configVersion: r.version,
+      attempt: i + 1,
+    })),
+  );
+  const sent = b.sent.filter((p) => p.data[2] === 3);
+  assert.equal(sent.length, 2);
+  assert.equal(sent[0].data[4] ^ 0x92, 0);
+  assert.equal(sent[1].data[4] ^ 0x92, 9);
+  assert.deepEqual(sent[0].data.subarray(5), sent[1].data.subarray(5));
+  assert.ok(sent.every((p) => p.opts.qos === 0 && !p.opts.retain));
+});
+test("negotiation never loops or retries other rejections, malformed replies or missing acknowledgements", async () => {
+  for (const [replies, count, code] of [
+    [[{ code: 7, version: 0 }], 1, "command-rejected"],
+    [[{ code: 2, version: 9 }], 1, "command-rejected"],
+    [
+      [
+        { code: 7, version: 9 },
+        { code: 7, version: 10 },
+      ],
+      2,
+      "command-rejected",
+    ],
+    [
+      [
+        { code: 7, version: 9 },
+        { code: 2, version: 9 },
+      ],
+      2,
+      "command-rejected",
+    ],
+    [[header(4)], 1, "command-uncertain"],
+    [[{ code: 7, version: 9 }, header(4)], 2, "command-uncertain"],
+    [[{ code: 7, version: 9 }], 2, "command-uncertain"],
+  ]) {
+    const b = broker({ activationReplies: replies });
+    await assert.rejects(
+      gateSession({ ...options, target: "open", connect: b.connect }),
+      (e) => e.code === code,
+    );
+    assert.equal(b.sent.filter((p) => p.data[2] === 3).length, count);
+  }
+});
+test("corrected-version retry rechecks authorization, cancellation and current gate state", async () => {
+  for (const mode of ["logout", "abort", "moving", "satisfied", "stale"]) {
+    const controller = new AbortController();
+    let checks = 0;
+    const b = broker({
+      activationReplies: [{ code: 7, version: 9 }],
+      onActivate: (_, incoming) => {
+        if (mode === "moving") incoming("deviceOverview", telemetry(5));
+        if (mode === "satisfied") incoming("deviceOverview", telemetry(0));
+      },
+    });
+    const realNow = Date.now;
+    try {
+      const p = gateSession({
+        ...options,
+        target: "open",
+        connect: b.connect,
+        signal: controller.signal,
+        beforeActivation: async () => {
+          if (++checks !== 2) return;
+          if (mode === "logout") throw new Error("session changed");
+          if (mode === "abort") controller.abort();
+          if (mode === "stale") Date.now = () => realNow() + 6000;
+        },
+      });
+      if (mode === "satisfied") assert.equal((await p).activated, false);
+      else await assert.rejects(p, (e) => e.code !== "command-uncertain");
+      assert.equal(checks, 2);
+      assert.equal(b.sent.filter((p) => p.data[2] === 3).length, 1);
+    } finally {
+      Date.now = realNow;
+    }
   }
 });

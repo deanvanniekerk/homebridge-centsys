@@ -49,10 +49,23 @@ export function timePacket(mac: string, now = new Date()): Buffer {
     mac,
   );
 }
-export function triggerPacket(mac: string, challenge: Buffer): Buffer {
+export function triggerPacket(
+  mac: string,
+  challenge: Buffer,
+  configVersion = 0,
+): Buffer {
+  if (
+    !Number.isInteger(configVersion) ||
+    configVersion < 0 ||
+    configVersion > 255
+  )
+    throw new CentsysError("configuration");
   if (challenge.length !== 4) throw new CentsysError("protocol");
   // Profile: D5 Evo SMART+ TRG only. No garage RUN or lock commands.
-  return Buffer.concat([packet(3, Buffer.from([0, 0, 34, 0]), mac), challenge]);
+  return Buffer.concat([
+    packet(3, Buffer.from([configVersion, 0, 34, 0]), mac),
+    challenge,
+  ]);
 }
 export function isResponse(data: Buffer, type: number): boolean {
   return (
@@ -72,10 +85,18 @@ export function challengeFrom(data: Buffer): Buffer {
     throw new CentsysError("protocol");
   return Buffer.from(data.subarray(-4));
 }
-export function activationAccepted(data: Buffer, mac: string): boolean {
+export interface ActivationResponse {
+  code: number;
+  configVersion: number;
+}
+export function decodeActivationResponse(
+  data: Buffer,
+  mac: string,
+): ActivationResponse {
   if (!isResponse(data, 4) || data.length < 6)
     throw new CentsysError("protocol");
-  return xor(data.subarray(4), mac)[1] === 1;
+  const body = xor(data.subarray(4), mac);
+  return { code: body[1]!, configVersion: body[0]! };
 }
 
 export interface LiveState {

@@ -8,12 +8,12 @@ import {
   timePacket,
   triggerPacket,
   challengeFrom,
-  activationAccepted,
+  decodeActivationResponse,
   isResponse,
   decodeGateTelemetry,
   needsTrigger,
 } from "./mqtt-codec.js";
-import type { LiveState, Target } from "./mqtt-codec.js";
+import type { ActivationResponse, LiveState, Target } from "./mqtt-codec.js";
 import type { Session } from "./storage.js";
 import { gateIdentity } from "./settings.js";
 
@@ -32,13 +32,17 @@ interface Options {
   /** Recheck local session/configuration immediately before a physical command. */
   beforeActivation?: () => Promise<void>;
   onState?: (state: LiveState) => void;
+  /** Numeric protocol diagnostics only; never raw packets or device/account identifiers. */
+  onActivationResponse?: (
+    response: ActivationResponse & { attempt: number },
+  ) => void;
 }
 export interface MqttResult {
   live: LiveState;
   activated: boolean;
 }
 
-/** One session, one optional activation. Reconnect and retransmission of activation are disabled. */
+/** One bounded session. Only explicit configuration mismatch permits one corrected-version retry. */
 export async function gateSession(options: Options): Promise<MqttResult> {
   if (
     options.target !== undefined &&
@@ -73,8 +77,11 @@ export async function gateSession(options: Options): Promise<MqttResult> {
   return new Promise((resolve, reject) => {
     let client: MqttClient | undefined;
     let done = false,
-      sent = false,
+      awaitingOutcome = false,
+      activated = false,
       ready = false;
+    let attempts = 0;
+    let configVersion = 0;
     let challenge: Buffer | undefined;
     let live: LiveState | undefined;
     let liveAt = 0;
@@ -103,11 +110,11 @@ export async function gateSession(options: Options): Promise<MqttResult> {
       } else client?.end(true);
       if (error)
         reject(
-          sent && error.code !== "command-rejected"
+          awaitingOutcome && error.code !== "command-rejected"
             ? new CentsysError("command-uncertain")
             : error,
         );
-      else if (live) resolve({ live, activated: sent });
+      else if (live) resolve({ live, activated });
       else reject(new CentsysError("protocol"));
     };
     const aborted = () => finish(new CentsysError("cancelled"));
@@ -174,9 +181,14 @@ export async function gateSession(options: Options): Promise<MqttResult> {
           finish();
           return;
         }
-        const packet = triggerPacket(options.macAddress, challenge);
+        const packet = triggerPacket(
+          options.macAddress,
+          challenge,
+          configVersion,
+        );
         stage = "ack";
-        sent = true;
+        attempts++;
+        awaitingOutcome = true;
         publish("userRemoteTrigger", packet, "userRemoteTriggerResponse");
       } catch (error) {
         finish(
@@ -247,12 +259,32 @@ export async function gateSession(options: Options): Promise<MqttResult> {
               proceed();
             } else if (stage === "time" && isResponse(payload, 6))
               void activate();
-            else if (stage === "ack")
-              finish(
-                activationAccepted(payload, options.macAddress)
-                  ? undefined
-                  : new CentsysError("command-rejected"),
+            else if (stage === "ack") {
+              const response = decodeActivationResponse(
+                payload,
+                options.macAddress,
               );
+              awaitingOutcome = false;
+              activated = response.code === 1;
+              options.onActivationResponse?.({
+                ...response,
+                attempt: attempts,
+              });
+              if (
+                response.code === 7 &&
+                attempts === 1 &&
+                response.configVersion !== configVersion
+              ) {
+                // The controller explicitly rejected this version. Match the pinned
+                // reference's single negotiation, with all pre-command checks repeated.
+                configVersion = response.configVersion;
+                stage = "time";
+                void activate();
+              } else
+                finish(
+                  activated ? undefined : new CentsysError("command-rejected"),
+                );
+            }
           } else if (name === topic("deviceOverview") && ready) {
             live = decodeGateTelemetry(payload);
             liveAt = Date.now();

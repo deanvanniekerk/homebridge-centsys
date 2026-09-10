@@ -34,7 +34,14 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
       this.#coordinator = new GateCoordinator(
         this.#config.gates,
         dependencies.gateway ??
-          new CloudGateway(storageDirectory(api.user.storagePath())),
+          new CloudGateway(
+            storageDirectory(api.user.storagePath()),
+            (reply) => {
+              this.log.info(
+                `Gate activation reply: attempt=${reply.attempt}, code=${reply.code}, configVersion=${reply.configVersion}.`,
+              );
+            },
+          ),
         this.#config.pollInterval,
       );
     } catch {

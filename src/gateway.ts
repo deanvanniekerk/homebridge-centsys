@@ -4,7 +4,7 @@ import type { Session } from "./storage.js";
 import { decodeDevices } from "./protocol.js";
 import { gateSession } from "./mqtt-session.js";
 import type { GateConfig } from "./settings.js";
-import type { LiveState, Target } from "./mqtt-codec.js";
+import type { ActivationResponse, LiveState, Target } from "./mqtt-codec.js";
 import { CentsysError } from "./errors.js";
 
 export class CloudGateway {
@@ -12,7 +12,12 @@ export class CloudGateway {
   #client: CentsysReadClient | undefined;
   #certificate: { pfx: Buffer; password: string } | undefined;
   #certificateAt = 0;
-  constructor(readonly directory: string) {}
+  constructor(
+    readonly directory: string,
+    readonly onActivationResponse?: (
+      response: ActivationResponse & { attempt: number },
+    ) => void,
+  ) {}
   async #load() {
     const session = await readSession(this.directory);
     if (
@@ -59,6 +64,7 @@ export class CloudGateway {
       target,
       signal,
       onState,
+      onActivationResponse: (reply) => this.onActivationResponse?.(reply),
       beforeActivation: async () => {
         const current = await readSession(this.directory);
         if (

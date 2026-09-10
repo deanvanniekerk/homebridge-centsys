@@ -41,15 +41,11 @@
             },
             "enableControl": {
               "type": "boolean",
-              "default": false
+              "default": true
             },
             "controlProfile": {
               "type": "string",
               "enum": ["d5-evo-smart-plus"]
-            },
-            "triggerModeConfirmed": {
-              "type": "boolean",
-              "default": false
             }
           }
         }

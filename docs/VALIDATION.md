@@ -266,3 +266,11 @@ The registry exposed both alpha and latest tags pointing to alpha.8. The initial
 ### Trusted publisher configured (2026-09-10)
 
 The maintainer supplied confirmation of the npm trusted publisher for `deanvanniekerk/homebridge-centsys`, workflow `release.yml`, environment `npm`, label `CENTSYS GitHub Actions`, with direct publish permission. The repository variable `NPM_PUBLISH_ENABLED` was enabled. Manual dispatch on main and the environment reviewer remain required. No workflow publication was dispatched; alpha.8 already exists and has no provenance attestation. The next unused version will provide the first end-to-end OIDC publishing check.
+
+### Alpha.9 setup simplification (2026-09-10)
+
+The new-gate wizard defaults open/close control on while preserving existing saved off settings. Removed the TRG confirmation checkbox and its runtime validation requirement; retained the explicit supported control profile and protocol address requirement. The page describes normal TRG operation in one sentence. The old save path rejected an enabled-control form without the checkbox, and successful Wi-Fi verification cleared the control choice. A regression run against the previous wizard reproduced the blocked save; the updated save/reopen and verification checks pass. This reproduces a path consistent with the owner report, not a capture of that original UI interaction.
+
+The Wi-Fi MAC from Pro is the default visible input. Saving that path requires successful verification; changed values invalidate it. Direct protocol entry is an explicit advanced option with a warning against using the Pro Wi-Fi address. Signed-in account fields collapse, empty discovery opens short Pro lookup instructions, and the tested model is mentioned once on the page.
+
+All 76 tests pass. A local Chromium check with a simulated Homebridge API exercised verification, saving control on/off, reselecting the saved gate and mobile layout without overflow. No gate commands, live configuration changes or npm publication were performed for this update. The existing real controller protocol checks and command sequencing are unchanged.

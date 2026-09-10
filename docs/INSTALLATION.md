@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 is installed on the owner's iHost and has displayed No Response during a real gate Wi-Fi outage. Automatic recovery failed the subsequent hardware check: identity replies resumed, but live telemetry did not arrive. That issue and monitoring/control handover on alpha.6 remain unresolved. npm publication remains disabled; install a development tarball for testing.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 is installed on the owner's iHost and displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. npm publication remains disabled; install a development tarball for testing.
 
 ## Requirements and package
 

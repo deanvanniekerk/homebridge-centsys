@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 is installed on the owner's iHost and displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. npm publication remains disabled; install a development tarball for testing.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. npm publication remains disabled; install a development tarball for testing.
 
 ## Requirements and package
 
@@ -54,7 +54,7 @@ A timeout does not establish that the address is wrong: controller reconnection 
 
 Remote **2.1.0.38** gate settings showed only Customise Device, Customise Actions, View Device Admins and Remove Device, with no identifier lookup. Pro **1.5.0.213** supplies the serial and Wi-Fi MAC through the screenshot-confirmed paths above; no direct Pro protocol-MAC lookup has been established. The discovery protocol field is grounded in the pinned [Home Assistant reference's device model](https://github.com/Lex-campbell/centsys_remote/blob/4d6daab50e4305fe2d3ea2c0d2df6e65737e1dba/custom_components/centsys_remote/api/models.py).
 
-The helper and its error paths have automated coverage and a local browser preview. The new end-to-end setup flow has **not yet been tested against the physical gate**; the earlier validated protocol address and physical control cycle are separate evidence.
+The helper and its error paths have automated coverage and a local browser preview. On alpha.7 installed on iHost, the wizard successfully verified the Pro-derived candidate against the physical controller, received fresh Closed status and filled the already validated protocol address. The form was closed without saving, preserving the existing control configuration. This validates one installation; first-time saving with the helper and other controllers remain untested.
 
 ### Concurrent sessions during setup
 

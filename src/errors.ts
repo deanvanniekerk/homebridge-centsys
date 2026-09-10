@@ -14,9 +14,12 @@ export type ErrorCode =
   | "state-unavailable"
   | "busy"
   | "command-uncertain"
-  | "command-rejected";
+  | "command-rejected"
+  | "gate-authentication";
 
 const messages: Record<ErrorCode, string> = {
+  "gate-authentication":
+    "The controller rejected the remote identity. Check the protocol address and Remote user registration.",
   "control-disabled": "Gate control is not enabled for this configuration.",
   "state-unavailable":
     "A usable gate state is unavailable. The command was not sent.",

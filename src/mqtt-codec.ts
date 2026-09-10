@@ -76,12 +76,19 @@ export function isResponse(data: Buffer, type: number): boolean {
     data[2] === type &&
     // D5 Evo SMART+ 2.1.0.0 returns an eight-byte cmd-06 envelope
     // with byte 3 set to 0x20. This identifies a time reply, not proof
-    // of activation; keep identity and activation response checks strict.
-    (data[3] === 0 || (type === 6 && data[3] === 0x20 && data.length === 8))
+    // of activation. The observed status-1 identity reply uses 0x87;
+    // challengeFrom also validates the decoded identity status.
+    (data[3] === 0 ||
+      (type === 6 && data[3] === 0x20 && data.length === 8) ||
+      (type === 2 && data[3] === 0x87 && data.length === 12))
   );
 }
-export function challengeFrom(data: Buffer): Buffer {
+export function challengeFrom(data: Buffer, mac: string): Buffer {
   if (!isResponse(data, 2) || data.length !== 12)
+    throw new CentsysError("protocol");
+  const status = xor(data.subarray(4, 8), mac);
+  if (status[0] !== 1) throw new CentsysError("gate-authentication");
+  if (status.subarray(1).some((v) => v !== 0))
     throw new CentsysError("protocol");
   return Buffer.from(data.subarray(-4));
 }

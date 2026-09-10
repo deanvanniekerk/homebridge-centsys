@@ -31,6 +31,8 @@ function broker({
   beforeTimeAck,
   timeReply = header(6),
   activationReplies,
+  identityStatus = 1,
+  identityHeader = 0,
 } = {}) {
   const client = new EventEmitter();
   const sent = [];
@@ -38,6 +40,7 @@ function broker({
   let activationCount = 0;
   client.end = () => {
     ended = true;
+    client.connected = false;
   };
   client.subscribe = (topics, _opts, cb) =>
     queueMicrotask(() =>
@@ -59,7 +62,12 @@ function broker({
       if (topic.endsWith("/connectionRequest"))
         incoming("connectionRequestResponse", Buffer.from([1]));
       else if (data[2] === 1) {
-        incoming("userRemoteTriggerResponse", header(2, Buffer.alloc(8)));
+        const reply = header(
+          2,
+          Buffer.from([0x92 ^ identityStatus, 0x23, 0xf3, 0x67, 0, 0, 0, 0]),
+        );
+        reply[3] = identityHeader;
+        incoming("userRemoteTriggerResponse", reply);
         incoming("deviceOverview", telemetry());
       } else if (data[2] === 5) {
         beforeTimeAck?.(incoming);
@@ -92,7 +100,10 @@ function broker({
     connect: (opts) => {
       assert.equal(opts.rejectUnauthorized, true);
       assert.equal(opts.reconnectPeriod, 0);
-      queueMicrotask(() => client.emit("connect"));
+      queueMicrotask(() => {
+        client.connected = true;
+        client.emit("connect");
+      });
       return client;
     },
   };
@@ -303,5 +314,24 @@ test("corrected-version retry rechecks authorization, cancellation and current g
     } finally {
       Date.now = realNow;
     }
+  }
+});
+
+test("rejected remote identity cannot reach time sync or activation even if telemetry arrives", async () => {
+  const b = broker({ identityStatus: 2 });
+  await assert.rejects(
+    gateSession({ ...options, target: "open", connect: b.connect }),
+    (e) => e.code === "gate-authentication",
+  );
+  assert.equal(b.sent.filter((p) => [3, 5].includes(p.data[2])).length, 0);
+  assert.equal(b.sent.filter((p) => p.topic.endsWith("/disconnect")).length, 1);
+});
+test("observed identity header is accepted only with a successful decoded identity status", async () => {
+  for (const status of [1, 2]) {
+    const b = broker({ identityStatus: status, identityHeader: 0x87 });
+    const p = gateSession({ ...options, connect: b.connect });
+    if (status === 1) assert.equal((await p).activated, false);
+    else await assert.rejects(p, (e) => e.code === "gate-authentication");
+    assert.equal(b.sent.filter((p) => [3, 5].includes(p.data[2])).length, 0);
   }
 });

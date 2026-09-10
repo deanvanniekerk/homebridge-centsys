@@ -79,7 +79,8 @@ export async function gateSession(options: Options): Promise<MqttResult> {
     let done = false,
       awaitingOutcome = false,
       activated = false,
-      ready = false;
+      ready = false,
+      operatorConnected = false;
     let attempts = 0;
     let configVersion = 0;
     let challenge: Buffer | undefined;
@@ -93,7 +94,7 @@ export async function gateSession(options: Options): Promise<MqttResult> {
       done = true;
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", aborted);
-      if (client?.connected && ready) {
+      if (client?.connected && operatorConnected) {
         // Release the operator's temporary telemetry session; bounded cleanup must not delay HAP.
         const closingClient = client;
         const cleanup = setTimeout(() => closingClient.end(true), 250);
@@ -249,11 +250,12 @@ export async function gateSession(options: Options): Promise<MqttResult> {
             stage === "connect"
           ) {
             if (payload.length !== 1) throw new CentsysError("protocol");
+            operatorConnected = true;
             stage = "identity";
             publish("userRemoteTrigger", identity, "userRemoteTriggerResponse");
           } else if (name === topic("userRemoteTriggerResponse")) {
             if (stage === "identity") {
-              challenge = challengeFrom(payload);
+              challenge = challengeFrom(payload, options.macAddress);
               ready = true;
               stage = "telemetry";
               proceed();

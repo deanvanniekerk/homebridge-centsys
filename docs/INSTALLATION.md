@@ -41,7 +41,7 @@ Obstruction remains **unknown internally** unless fresh MQTT telemetry supports 
 
 ## Experimental control
 
-The default is monitoring only. The advanced UI option requires a D5 Evo SMART+ in South Africa, its Wi-Fi MAC, and confirmation that the installed TRG mode opens a fully closed gate and closes a fully open one. Other motor families/regions are not supported for activation in this alpha.
+The default is monitoring only. The advanced UI option requires a D5 Evo SMART+ in South Africa, its protocol MAC address, and confirmation that the installed TRG mode opens a fully closed gate and closes a fully open one. Use the cloud device listing's `macAddress` or an independently validated protocol address. The Wi-Fi MAC displayed by MyCentsys Pro was not the correct key source on the investigated installation; do not assume the two addresses are interchangeable or apply the observed conversion to every controller. Other motor families/regions are not supported for activation in this alpha.
 
 Each request obtains a new MQTT identity challenge and non-retained telemetry over verified mutual TLS. Matching endpoints/directions are no-ops; opposing motion, intermediate/unknown state, known obstruction or reported inhibiting conditions reject the request. Unknown obstruction is not proof of a clear driveway; enabling control does not establish the installation's safety equipment or suitability for unattended closing.
 

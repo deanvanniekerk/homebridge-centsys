@@ -206,7 +206,7 @@
           !el("trigger-confirmed").checked)
       ) {
         notify(
-          "Control requires the Wi-Fi MAC address and confirmation of TRG behaviour.",
+          "Control requires the protocol MAC address and confirmation of TRG behaviour.",
         );
         return;
       }

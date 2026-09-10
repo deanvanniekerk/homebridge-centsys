@@ -145,6 +145,14 @@ The diagnostic reply file was written at 10:42:27.844 UTC (12:42:27 SAST). `Shee
 
 The older event timestamps are unchanged despite the two-hour difference between earlier and later correlations. Do not apply a single UTC/local conversion blindly across the export; the controller clock appears to have changed between the exports. The log also records physical-remote activity during the new interval; those movement records precede our identity-only probe and are not plugin control evidence. [Sanitized correlation](validation/2026-09-10-identity-log-correlation.json) preserves these distinctions. Production code/configuration remain unchanged.
 
+### Identity status validation — alpha.5
+
+The session now decrypts the four-byte command-02 status and requires `[1,0,0,0]` before accepting its challenge. Status 2, previously correlated with controller authentication failures, stops the session before time sync or activation. The exact observed twelve-byte header with byte 3 set to `0x87` is accepted alongside the existing zero variant. Its general vendor meaning is still unknown. Cleanup releases the operator session even when identity validation fails.
+
+Synthetic regressions reproduced the old behavior, then passed with the fix: rejected identity cannot reach commands 05 or 03 even if telemetry follows; the observed header still requires accepted status. All 51 tests, TypeScript build and formatting checks pass. Setup now requests a protocol MAC rather than directing the owner to the Pro Wi-Fi address.
+
+Two bounded local checks used the candidate address and an independent publish allowlist permitting only connection request, one identity packet and disconnect. Both returned header `[1,1,2,135]` and status `[1,0,0,0]`. The first timed out after 25 seconds waiting for telemetry. The follow-up received a non-retained 68-byte deviceOverview at 12.641 seconds and returned Closed with `activated: false`. No time-sync or activation packet was sent. The successful follow-up validates the read-only path but does not explain the first timeout or prove reliable physical control. Controller identity is now checked rather than inferred from receipt of a challenge.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

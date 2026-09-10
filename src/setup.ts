@@ -177,6 +177,7 @@ export class SetupService {
     return devices.map((d) => ({
       serialNumber: d.serialNumber,
       label: `Gate …${d.serialNumber.slice(-6)}`,
+      ...(d.macAddress ? { macAddress: d.macAddress } : {}),
     }));
   }
   async checkGate(input: unknown) {

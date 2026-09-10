@@ -15,13 +15,41 @@ From a development checkout, `npm ci`, `npm run check` and `npm pack` produce th
 
 1. Enter the MyCentsys account's international phone number, region, and WhatsApp/SMS preference; click **Send code**.
 2. Enter the received OTP and click **Sign in**. Keep the settings modal open until this completes.
-3. Click **Find account gates**. If discovery is empty, copy the 24-character serial from Pro's Operator Information screen into the form.
+3. Click **Find account gates** and select an entry. Setup fills its serial and the protocol MAC when the listing supplies a valid `macAddress`. Missing or invalid addresses remain unfilled; the plugin does not substitute a Wi-Fi MAC. If discovery fails or returns no gates, the wizard opens **Manual setup**; follow the instructions below.
 4. Set the Home name and validated **protocol MAC address**, click **Check gate status**, then **Save gate**. Start with control disabled. The status button is a cloud preview; runtime availability also requires live telemetry. Monitoring currently supports the tested D5 Evo SMART+ profile in South Africa.
 5. Restart the plugin's child bridge or Homebridge. Add the bridge/accessory in Apple Home using Homebridge's normal pairing process.
 
 The plugin's server prepares the pinned bootstrap credential on the first explicit code request. No shell command or token copying is required for UI setup. This remains an unofficial protocol dependency: the file hash must match the pinned source, and a vendor change can require a plugin update.
 
 The UI process owns a short-lived login challenge, allows up to five code-verification attempts, and persists a one-minute resend cooldown. Closing the modal discards the pending challenge; a saved session remains intact. Failed login attempts do not overwrite an existing working session. The session's lifetime is not established, and no supported refresh protocol is assumed. A rejected session is shown as **Sign-in required** when settings checks it; runtime authentication failures mark gate state unavailable. No automatic code requests or gate activations occur.
+
+## If discovery is empty or the protocol MAC is missing
+
+An empty result does not mean the gate is offline or that sign-in failed. On the investigated account, the cloud accepted authentication and manual gate access worked while discovery returned no entries. Fixing controller MQTT authentication did not change that cloud result. Automatic filling is implemented and covered with simulated discovery responses; successful discovery has not yet been observed on this installation.
+
+Check that the Homebridge login uses the same international phone number and region as **MyCentsys Remote**. In **MyCentsys Pro**, connect to the operator and open **Users → MyCentsys Remote**. Confirm the number is present and enabled; the adjacent **Operator Admins** list is a separate role. In Remote, locate **SMART Settings → SMART Plus Retrieval**, run it, and try **Find account gates** again. This retrieval screen and the two user lists were observed in the supplied app screenshots. Retrieval may still return nothing even when a manually added gate works. Do not delete and re-add a working gate just to follow this guide.
+
+### Copy the serial from MyCentsys Pro
+
+These screen labels were observed in Pro **1.5.0.213**; navigation can differ by version.
+
+1. Stand near the gate, open Pro and enable phone Bluetooth if required for a direct connection.
+2. Select and connect to the operator. Open its settings and locate **Operator Information**.
+3. Find **Serial Number** and tap the copy icon next to it. Copy the entire **24-character** value, including leading zeroes.
+4. Paste it into **Controller serial number** in Homebridge. The operator name, model, IP address and short device labels are not substitutes.
+5. Click **Check gate status**. A returned cloud state confirms a status response for that serial; it does **not** validate the MAC or establish live connectivity.
+
+### Locate the Wi-Fi MAC without confusing it with the protocol MAC
+
+1. While connected in Pro, open **Wi-Fi Settings**.
+2. Scroll to **Advanced Wi-Fi Information** and locate **MAC Address**. Record the six hexadecimal byte pairs. This section also shows cloud connection and signal information.
+3. Treat that value as the **Wi-Fi MAC for troubleshooting**, not as a value to paste into **Gate protocol MAC address**. The two differed on the tested D5 Evo SMART+.
+
+**The app-only fallback for the protocol MAC remains unverified.** We have not established a screen in Pro 1.5.0.213 or Remote 2.1.0.38 that directly exposes the required protocol value. Cloud discovery supplies it through `macAddress` when available. If discovery omits it and you do not already have an independently validated protocol address, setup cannot yet be completed reliably from these instructions alone.
+
+Record the app versions, operator model and firmware (from **Operator Information**) and request setup assistance. Share the serial, MAC and screenshots privately when needed; do not include them in a public issue. Do not convert the Wi-Fi MAC using a guessed universal rule or enable control to test candidate addresses. The address transformation investigated for one installation has not been established for other controllers.
+
+The serial and Wi-Fi steps above are grounded in the owner's supplied screenshots. The protocol-field source is the pinned [Home Assistant reference's device model](https://github.com/Lex-campbell/centsys_remote/blob/4d6daab50e4305fe2d3ea2c0d2df6e65737e1dba/custom_components/centsys_remote/api/models.py). A verified end-user protocol-MAC fallback remains a release-readiness gap, not a documented app capability.
 
 ## Storage and updates
 

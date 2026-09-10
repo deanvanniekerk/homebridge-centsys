@@ -4,6 +4,7 @@
   let configs = [],
     index = -1,
     gates = [],
+    discovered = [],
     challengeId,
     busy = false;
   const notify = (message) => {
@@ -71,6 +72,11 @@
     node.textContent = label;
     select.append(node);
   }
+  function clearDiscovery() {
+    discovered = [];
+    el("discovered").replaceChildren();
+    option(el("discovered"), "", "Choose a discovered gate");
+  }
   function saved(selected = "") {
     el("configured").replaceChildren();
     option(el("configured"), "", "Add a gate");
@@ -90,6 +96,10 @@
     el("trigger-confirmed").checked = g.triggerModeConfirmed === true;
     el("remove-gate").hidden = selected === "";
     el("gate-state").textContent = "";
+    el("discovered").value = "";
+    el("mac-source").textContent = g.macAddress
+      ? "Saved address for this gate."
+      : "";
   }
   async function saveConfig(nextGates) {
     const next = [...configs];
@@ -109,11 +119,40 @@
   }
   el("configured").addEventListener("change", loadGate);
   el("discovered").addEventListener("change", () => {
-    if (el("discovered").value) el("serial").value = el("discovered").value;
+    const device = discovered.find(
+      (g) => g.serialNumber === el("discovered").value,
+    );
+    if (!device) return;
+    // A new selection must never inherit another gate's identity or control consent.
+    const existing = gates.findIndex(
+      (g) => g.serialNumber === device.serialNumber,
+    );
+    el("configured").value = existing < 0 ? "" : String(existing);
+    loadGate();
+    el("discovered").value = device.serialNumber;
+    el("serial").value = device.serialNumber;
+    // Preserve an explicitly saved address for the same gate when discovery omits it.
+    if (device.macAddress) el("mac").value = device.macAddress;
+    el("mac-source").textContent = device.macAddress
+      ? "Protocol MAC supplied by account discovery."
+      : el("mac").value
+        ? "Discovery omitted the MAC; using this gate's saved address."
+        : "Discovery did not supply a protocol MAC. See manual setup help below.";
+    if (!el("mac").value) el("manual-help").open = true;
     el("gate-state").textContent = "";
   });
   el("serial").addEventListener("input", () => {
     el("gate-state").textContent = "";
+    el("discovered").value = "";
+    el("mac").value = "";
+    el("mac-source").textContent =
+      "Serial changed. Enter the address for this gate.";
+    el("enable-control").checked = false;
+    el("trigger-confirmed").checked = false;
+  });
+  el("mac").addEventListener("input", () => {
+    el("mac-source").textContent =
+      "Manually entered address; cloud status does not validate it.";
   });
   el("login-form").addEventListener("submit", (event) => {
     event.preventDefault();
@@ -141,6 +180,7 @@
       const result = await request("/auth/verify", { challengeId, code });
       if (result.failed) return;
       challengeId = undefined;
+      clearDiscovery();
       el("phone").value = "";
       el("code-form").hidden = true;
       await account();
@@ -156,6 +196,7 @@
         const result = await request("/auth/logout");
         if (result.failed) return;
         challengeId = undefined;
+        clearDiscovery();
         el("code").value = "";
         el("phone").value = "";
         el("code-form").hidden = true;
@@ -167,17 +208,23 @@
     "click",
     () =>
       void task(async () => {
-        const result = await request("/devices");
-        if (result.failed) return;
+        discovered = [];
         el("discovered").replaceChildren();
+        const result = await request("/devices");
+        if (result.failed) {
+          el("manual-help").open = true;
+          return;
+        }
+        discovered = result;
         option(el("discovered"), "", "Choose a discovered gate");
         result.forEach((g) =>
           option(el("discovered"), g.serialNumber, g.label),
         );
+        if (!result.length) el("manual-help").open = true;
         notify(
           result.length
-            ? "Select a gate, check its status and save."
-            : "No account gates were returned. You can enter your controller serial manually.",
+            ? "Select a gate to fill its serial and available protocol MAC, then check its status."
+            : "No account gates were returned. Follow the manual setup help below; an empty list does not mean your gate is offline.",
         );
       }),
   );

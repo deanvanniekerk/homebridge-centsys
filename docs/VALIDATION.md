@@ -217,6 +217,14 @@ On a later log inspection, a transport error at 11:56:14 UTC coincided with the 
 
 Shortly before the timestamp check at 12:00:29 UTC, native Apple Home changed from No Response to Closed without a child-bridge restart, configuration change or movement command. This establishes eventual recovery of the installed plugin after the outage, but not a clean measurement of unattended recovery latency: the owner closed the apps and read-only diagnostic connections also occurred. The owner's suggestion of delayed cloud reconnection/registration remains plausible, as does app-session competition; this test does not distinguish them. Earlier failed bounded checks remain valid observations rather than proof that recovery never occurs.
 
+### Discovery identity propagation and manual setup help
+
+The cloud-only diagnostic was retried at 12:09:45.138 UTC and still returned zero gates after the corrected controller authentication. Discovery now preserves a valid listing `macAddress` through the parser and setup API to the wizard. Formatting accepts six colon-separated bytes or twelve hex digits and preserves byte order. Missing/malformed optional MAC values remain absent; no nested Wi-Fi address or numeric offset is substituted.
+
+Selecting another gate clears the previous identity and control consent. Editing the serial clears the MAC. A saved address is retained only for the same selected gate when discovery omits it. Empty and failed discovery reveal manual help; the guide distinguishes the screenshot-confirmed serial and Wi-Fi-MAC paths from the still-unverified protocol-MAC app path. No claim is made that cloud-empty accounts can now complete setup without assistance.
+
+Regression coverage exercises discovery parsing, the setup API's public field allowlist, and the shipped wizard event handlers, including cross-gate address isolation and empty/error help. No live discovery row with MAC was available for validation, and no gate commands or production configuration changes were made for this work.
+
 ## Remaining before routine Homebridge control
 
 Characterize delayed live telemetry after an outage with official apps closed before the test and no competing diagnostic session. The installed plugin eventually recovered without a restart, but latency and cause remain unresolved. Also verify monitoring/control handover on hardware. Then assess reliability beyond the first successful cycle. Transport-failure recovery, local stale reads and target reconciliation have controlled test coverage. Apple Home has displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

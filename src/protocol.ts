@@ -14,6 +14,8 @@ export type GateState =
   | "closing";
 
 export interface Device {
+  /** Protocol address from the cloud listing, never derived from a Wi-Fi address. */
+  macAddress?: string;
   serialNumber: string;
   productCode: number | null;
   productType: number | null;
@@ -88,12 +90,24 @@ function list<T extends { serialNumber: string }>(
   return rows;
 }
 
+function discoveryMac(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const text = value.trim();
+  if (/^([0-9a-f]{2}:){5}[0-9a-f]{2}$/i.test(text)) return text.toUpperCase();
+  // Formatting only: preserve byte order and value.
+  if (/^[0-9a-f]{12}$/i.test(text))
+    return text.match(/.{2}/g)!.join(":").toUpperCase();
+  return undefined;
+}
+
 export function decodeDevices(value: unknown): Device[] {
   return list(value, (value) => {
     const row = record(value);
     const wifi =
       row.deviceWiFiStatus == null ? {} : record(row.deviceWiFiStatus);
+    const macAddress = discoveryMac(row.macAddress);
     return {
+      ...(macAddress ? { macAddress } : {}),
       serialNumber: serial(row.serialNumber),
       productCode: integer(row.productCode),
       productType: integer(row.productType),

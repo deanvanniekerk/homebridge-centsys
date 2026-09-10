@@ -8,7 +8,7 @@ The tested controller is **D5 Evo SMART+**, Core and Comms Interface firmware **
 
 ## Homebridge setup
 
-Use Homebridge 2.4.x and Node 22 or 24. Install the development tarball, open the plugin's settings, and follow the phone/OTP wizard. Select a discovered gate or enter its serial, check status, save and restart. Session credentials live in Homebridge's persistent storage, so restarting or updating the plugin does not require another login unless the vendor rejects the session.
+Use Homebridge 2.4.x and Node 22 or 24. Install the development tarball, open the plugin's settings, and follow the phone/OTP wizard. Select a discovered gate to fill its serial and available protocol MAC, or follow the [manual setup guide](docs/INSTALLATION.md#if-discovery-is-empty-or-the-protocol-mac-is-missing). Cloud-empty accounts still need an independently validated protocol MAC; a universal app-only fallback is not yet established. Check status, save and restart. Session credentials live in Homebridge's persistent storage, so restarting or updating the plugin does not require another login unless the vendor rejects the session.
 
 See [installation, storage and control limitations](docs/INSTALLATION.md). No npm release has been published, and `private: true` prevents accidental publication.
 

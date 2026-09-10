@@ -374,3 +374,29 @@ test("MQTT certificate retrieval uses saved bearer and rejects malformed secrets
     (e) => e.code === "protocol" && !e.message.includes("private"),
   );
 });
+
+test("discovery retains only valid protocol MACs without converting Wi-Fi addresses", () => {
+  for (const value of ["aa:bb:cc:dd:ee:01", "aabbccddee01"]) {
+    assert.equal(
+      decodeDevices([{ ...device, macAddress: value }])[0].macAddress,
+      "AA:BB:CC:DD:EE:01",
+    );
+  }
+  for (const value of [
+    undefined,
+    null,
+    "",
+    "not-a-mac",
+    123,
+    "AA:BB:CC:DD:EE:FF:00",
+  ]) {
+    const [result] = decodeDevices([
+      {
+        ...device,
+        macAddress: value,
+        deviceWiFiStatus: { macAddress: "AA:BB:CC:DD:EE:02" },
+      },
+    ]);
+    assert.equal(result.macAddress, undefined);
+  }
+});

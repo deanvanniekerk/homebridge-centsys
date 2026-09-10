@@ -132,3 +132,26 @@ test("rejected session appears as sign-in required and logout removes only the l
   await setup.logout();
   assert.deepEqual(await setup.status(), { state: "signed-out" });
 });
+
+test("setup discovery exposes serial and protocol MAC, not raw account/device metadata", async (t) => {
+  const f = await fixture(t);
+  await saveSession(original, f.directory);
+  const serialNumber = "00112233445566778899AABB";
+  const setup = new SetupService({
+    ...f.opts,
+    createClient: () => ({
+      discover: async () => [
+        {
+          serialNumber,
+          macAddress: "AA:BB:CC:DD:EE:01",
+          raw: { token: "private" },
+        },
+        { serialNumber: "00112233445566778899AACC" },
+      ],
+    }),
+  });
+  assert.deepEqual(await setup.devices(), [
+    { serialNumber, label: "Gate …99AABB", macAddress: "AA:BB:CC:DD:EE:01" },
+    { serialNumber: "00112233445566778899AACC", label: "Gate …99AACC" },
+  ]);
+});

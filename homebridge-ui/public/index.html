@@ -70,9 +70,69 @@
       <option value="">Choose a discovered gate</option>
     </select>
     <p class="hint">
-      An empty list can occur even when the app controls your gate. Copy its
-      Serial Number from Pro → Operator Information below.
+      Selecting a gate fills its serial and protocol MAC when the service
+      supplies them. If the list is empty or a MAC is missing, use the manual
+      setup help below.
     </p>
+    <details id="manual-help">
+      <summary>Manual setup: find the serial and address in the apps</summary>
+      <h5>First check account discovery</h5>
+      <ol>
+        <li>
+          Use the same international phone number and region as MyCentsys
+          Remote.
+        </li>
+        <li>
+          In MyCentsys Pro, connect to the operator, open Users, then select
+          MyCentsys Remote. Confirm your number is listed and enabled. An
+          Operator Admin entry alone is a separate role.
+        </li>
+        <li>
+          In MyCentsys Remote, open SMART Settings → SMART Plus Retrieval, then
+          retry Find account gates here. Retrieval may return nothing even when
+          a manually added gate works. You do not need to delete it.
+        </li>
+      </ol>
+      <h5>Copy the controller serial</h5>
+      <ol>
+        <li>
+          Open MyCentsys Pro near the gate, enable phone Bluetooth if needed,
+          and connect to the operator.
+        </li>
+        <li>Open the operator's settings and find Operator Information.</li>
+        <li>
+          Find Serial Number and tap its copy icon. Paste the full 24-character
+          value into Controller serial number below. Do not use the gate name,
+          product model or IP address.
+        </li>
+      </ol>
+      <h5>Find the address — two different values</h5>
+      <p>
+        The plugin needs the <strong>protocol MAC</strong> supplied by cloud
+        discovery. We have not yet verified a screen in Pro 1.5.0.213 or Remote
+        2.1.0.38 that exposes that value directly.
+      </p>
+      <ol>
+        <li>In Pro, connect to the operator and open Wi-Fi Settings.</li>
+        <li>
+          Under Advanced Wi-Fi Information, find MAC Address. This is the
+          <strong>Wi-Fi MAC</strong>; record it for troubleshooting, but do not
+          paste it into the protocol MAC field as an equivalent value.
+        </li>
+        <li>
+          If discovery still supplies no protocol MAC, setup needs further
+          assistance. Record your app versions and the operator model and
+          firmware from Operator Information. Share identifiers privately when
+          requested, not in a public issue.
+        </li>
+      </ol>
+      <p>
+        The tested gate required a different protocol address from its Wi-Fi
+        MAC. A universal conversion has not been established. Check gate status
+        below only checks cloud status for the serial; it does not validate a
+        manually entered MAC. Do not enable control to test a guessed address.
+      </p>
+    </details>
     <form id="gate-form">
       <label for="gate-name">Name in Apple Home</label
       ><input
@@ -104,6 +164,7 @@
         autocomplete="off"
         spellcheck="false"
       />
+      <p id="mac-source" role="status" aria-live="polite"></p>
       <p class="hint">
         Use the device address supplied by cloud discovery or independently
         validated for this controller. The Wi-Fi MAC shown in MyCentsys Pro can

@@ -155,12 +155,12 @@ Two bounded local checks used the candidate address and an independent publish a
 
 Alpha.5 was installed on iHost from a SHA-256-verified tarball; npm changed one package. An independent publish-guarded check using the installed code and saved iHost login returned Closed with `activated: false` and exactly one identity packet. Only after that check passed was the gate's protocol address updated, with a private pre-change configuration backup. Existing control settings were preserved. The CENTSYS-only restart reported alpha.5 at 10:56:43 UTC, and Apple Home displayed Closed. The temporary transfer server was stopped. Physical control with the corrected identity remains untested.
 
-### First accepted HomeKit open — alpha.5
+### First physically confirmed HomeKit open-and-close cycle — alpha.5
 
 After renewed owner readiness, one open request was sent through Apple Home. The installed plugin logged an activation reply at 11:01:51 UTC with `attempt=1, code=1, configVersion=0`. No configuration-version retry was needed. Apple Home was observed showing Opening and subsequently Open. This is the first accepted activation reply through the plugin. Physical observation by the owner is pending; no close request has been sent.
 
-The owner confirmed that the gate physically opened fully and authorized one close request with the driveway clear. That HomeKit close returned `attempt=1, code=1, configVersion=0` at 11:03:33 UTC. Apple Home was observed showing Closing and then Closed. Neither request needed negotiation or replay. Physical closure confirmation is pending.
+The owner confirmed that the gate physically opened fully and authorized one close request with the driveway clear. That HomeKit close returned `attempt=1, code=1, configVersion=0` at 11:03:33 UTC. Apple Home was observed showing Closing and then Closed. Neither request needed negotiation or replay. The owner subsequently confirmed that the gate physically closed fully. This establishes one complete, owner-observed HomeKit open-and-close cycle on the installed alpha.5 with the corrected protocol address.
 
 ## Remaining before routine Homebridge control
 
-Confirm physical closure for the accepted close request, then validate offline/stale behavior and target reconciliation on the installation. Apple Home has now displayed both movement directions and endpoints, and the owner confirmed physical opening. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.
+Validate offline/stale behavior and target reconciliation on the installation, and assess reliability beyond the first successful cycle. Apple Home has now displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

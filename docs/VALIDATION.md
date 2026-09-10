@@ -191,6 +191,14 @@ A local read-only check against the gate returned Closed at 11:25:11.148 UTC aft
 
 Alpha.6 was installed on iHost from a SHA-256-verified archive; npm changed one package. The CENTSYS child bridge restarted at 11:27:26 UTC with alpha.6. Apple Home showed Closed after startup and again after a further 40-second observation interval. The transfer server was stopped. No movement commands were sent during recovery, development or installation. The repeated owner-assisted outage and command handover on alpha.6 remain to be verified on hardware.
 
+### Repeated gate Wi-Fi outage — alpha.6
+
+The owner disabled gate Wi-Fi again. At 11:31:02.753 UTC, the separate HTTPS-only research client still received Closed/code 2 without a measurement timestamp. Apple Home showed Closed at that observation and again roughly 25 seconds later. The installed child bridge log already showed unavailable-state and deadline warnings at 11:30:35 UTC. No activation reply was added; the last activation entries remained the earlier alpha.5 physical cycle.
+
+On the next native Home inspection, shortly before the 11:34:26 UTC timestamp check, both the room status and gate tile showed No Response. No tile interaction, command or child-bridge restart was performed to cause that change. This confirms eventual visible unavailability during a real controller outage, despite cached HTTPS Closed responses. It does not establish a 45-second visible transition: the precise Wi-Fi disable time and tile transition were not captured, and Home's display lagged the runtime warnings. The 45-second limit applies to local live-verification validity, not a guaranteed Apple Home UI refresh time.
+
+The owner was asked to restore gate Wi-Fi after this observation. Automatic recovery on alpha.6 remains pending. No movement commands were sent during the outage check.
+
 ## Remaining before routine Homebridge control
 
-Repeat the owner-assisted outage test on alpha.6 to verify the availability fix, and verify monitoring/control handover on hardware. Then assess reliability beyond the first successful cycle. Transport-failure recovery, local stale reads and target reconciliation have controlled test coverage. Apple Home has displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.
+Verify automatic recovery after the alpha.6 hardware outage, and verify monitoring/control handover on hardware. Then assess reliability beyond the first successful cycle. Transport-failure recovery, local stale reads and target reconciliation have controlled test coverage. Apple Home has displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

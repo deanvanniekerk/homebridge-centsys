@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. It is installed on the owner's iHost and Apple Home displays Closed. Moving-state updates in Apple Home and physical activation still need an observed test. npm publication remains disabled; install a development tarball for testing.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 is installed on the owner's iHost and has displayed No Response during a real gate Wi-Fi outage. Recovery from that outage and monitoring/control handover on alpha.6 remain to be checked. npm publication remains disabled; install a development tarball for testing.
 
 ## Requirements and package
 
@@ -33,7 +33,7 @@ Signing out removes this Homebridge's local session, not the official app's logi
 
 ## Monitoring and HomeKit state
 
-The accessory maps Open/Closed/Opening/Closing to HomeKit door states and partly-open/partly-closed to Stopped. Alpha.6 additionally requires a verified live MQTT identity and non-retained telemetry before it exposes an available state. The last live verification expires after 45 seconds, independently of successful HTTPS responses. An expiry timer pushes communication failure to HomeKit even if cloud polling keeps returning a cached Closed value. Missing protocol addresses or unsupported regions remain unavailable; the cloud-preview button and research CLI can still show explicitly labelled cloud-reported status.
+The accessory maps Open/Closed/Opening/Closing to HomeKit door states and partly-open/partly-closed to Stopped. Alpha.6 additionally requires a verified live MQTT identity and non-retained telemetry before it exposes an available state. The last live verification expires after 45 seconds, independently of successful HTTPS responses. An expiry timer marks the HomeKit characteristics with communication failure even if cloud polling keeps returning a cached Closed value. This is not a 45-second guarantee for Apple Home's visible tile: the real outage test showed Closed after the plugin reported unavailability, then No Response on a later observation. Missing protocol addresses or unsupported regions remain unavailable; the cloud-preview button and research CLI can still show explicitly labelled cloud-reported status.
 
 The default idle poll is 15 seconds. A newly observed moving state or control request enables a bounded 60-second observation period with nominal two-second delays. Live verification is renewed when its age reaches 20 seconds, including when a longer idle poll interval is configured. A newly renewed live state takes precedence over the HTTP state for that read. Subsequent HTTP reads can update position but never extend the live-verification timestamp. Probe latency adds to these timings; failed reads back off up to five minutes. Recovery may therefore wait for the next retry. Monitoring sends connection, identity and disconnect packets only. Before control connects, it cancels and awaits any monitoring session teardown to avoid overlapping the shared account client ID. Multiple configured gates are verified sequentially; timing and long-running load have only been evaluated for one gate. Vendor rate limits and battery impact remain unvalidated.
 
@@ -49,4 +49,4 @@ Before each TRG publish, the session rechecks state age and the locally saved ac
 
 A successful activation acknowledgement is not proof that the gate moved or reached the target. The coordinator keeps polling actual state; it never invents Closed from a travel timer.
 
-A real Wi-Fi outage on alpha.5 confirmed that the vendor can keep reporting Closed while the gate is disconnected. Alpha.6 addresses availability with independent live verification; a repeated owner-assisted hardware outage test is still required. Availability is bounded by the last live observation, not instantaneous detection of a disconnect.
+A real Wi-Fi outage on alpha.5 confirmed that the vendor can keep reporting Closed while the gate is disconnected. In the repeated owner-assisted outage on alpha.6, Apple Home eventually displayed No Response. The exact visible transition latency was not measured. Plugin availability is bounded by the last live observation; Apple Home display refresh can add delay.

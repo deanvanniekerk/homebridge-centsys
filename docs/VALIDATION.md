@@ -153,6 +153,8 @@ Synthetic regressions reproduced the old behavior, then passed with the fix: rej
 
 Two bounded local checks used the candidate address and an independent publish allowlist permitting only connection request, one identity packet and disconnect. Both returned header `[1,1,2,135]` and status `[1,0,0,0]`. The first timed out after 25 seconds waiting for telemetry. The follow-up received a non-retained 68-byte deviceOverview at 12.641 seconds and returned Closed with `activated: false`. No time-sync or activation packet was sent. The successful follow-up validates the read-only path but does not explain the first timeout or prove reliable physical control. Controller identity is now checked rather than inferred from receipt of a challenge.
 
+Alpha.5 was installed on iHost from a SHA-256-verified tarball; npm changed one package. An independent publish-guarded check using the installed code and saved iHost login returned Closed with `activated: false` and exactly one identity packet. Only after that check passed was the gate's protocol address updated, with a private pre-change configuration backup. Existing control settings were preserved. The CENTSYS-only restart reported alpha.5 at 10:56:43 UTC, and Apple Home displayed Closed. The temporary transfer server was stopped. Physical control with the corrected identity remains untested.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

@@ -250,3 +250,9 @@ Only the CENTSYS child bridge was restarted. Its log records successful alpha.7 
 Using the previously supplied Pro serial and Wi-Fi MAC, the deployed **Verify Wi-Fi address (no movement)** action succeeded on its first attempt. At approximately **12:47 UTC** the wizard reported accepted controller identity and fresh live **Closed** status, and filled the same protocol MAC already saved for this gate. The helper's code path supplies no movement target and sends no time-sync/activation packet. No HomeKit control was used. Apple Home also showed Home Gate Closed during this check.
 
 The form was closed without saving, because the address already matched and verification clears unsaved control consent. Existing saved control settings were preserved. This validates the helper against one real controller using an existing login; first-time account setup/save and other installations remain untested. Outage recovery latency and monitoring/control handover still need broader hardware validation. No npm release has been published.
+
+### Release workflow aligned with AquaTemp
+
+The release procedure now mirrors AquaTemp: manual workflow dispatch on main with an exact approved version, reusable CI, an npm environment requiring the maintainer's review, a repository publish-enable variable, and OIDC trusted publishing with provenance. CI covers Node 22.23.2, current Node 22/24 and emulated ARMv7 using AquaTemp's pinned container/action references. The release guard supports CENTSYS alpha versions as well as beta/stable channels and rejects missing or mismatched approval, registry, access and dist-tags. All 73 local tests pass.
+
+The GitHub npm environment was configured with the maintainer reviewer and a main-only branch policy. NPM_PUBLISH_ENABLED is false pending the separate npm trusted-publisher setup. No local npm login is required by the routine workflow. The GitHub release remains a draft; no npm publication or further iHost change occurred.

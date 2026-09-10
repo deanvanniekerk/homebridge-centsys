@@ -15,13 +15,13 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node --test test/*.test.mjs",
-    "format": "prettier --write src test package.json tsconfig.json .github/workflows/check.yml homebridge-ui config.schema.json",
-    "format:check": "prettier --check src test package.json tsconfig.json .github/workflows/check.yml homebridge-ui config.schema.json",
+    "format": "prettier --write src test package.json tsconfig.json .github/workflows scripts homebridge-ui config.schema.json",
+    "format:check": "prettier --check src test package.json tsconfig.json .github/workflows scripts homebridge-ui config.schema.json",
     "check": "npm run format:check && npm test",
     "prepare:auth": "npm run build && node dist/prepare-auth.js",
     "diagnose": "npm run build && node dist/cli.js",
     "prepack": "npm run build",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "node scripts/check-release.mjs"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
@@ -49,7 +49,9 @@
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "docs/INSTALLATION.md",
-    "docs/VALIDATION.md"
+    "docs/VALIDATION.md",
+    "scripts/check-release.mjs",
+    "docs/RELEASING.md"
   ],
   "author": "Dean van Niekerk",
   "homepage": "https://github.com/deanvanniekerk/homebridge-centsys#readme",
@@ -60,5 +62,6 @@
     "access": "public",
     "tag": "alpha",
     "registry": "https://registry.npmjs.org/"
-  }
+  },
+  "packageManager": "npm@10.9.8"
 }

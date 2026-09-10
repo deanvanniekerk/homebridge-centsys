@@ -1,0 +1,21 @@
+{
+  "source": "Second owner-provided controller export, 10 September 2026; identifying filename omitted",
+  "newEvents": 64,
+  "overlapEventsMatchedExactly": 4936,
+  "newAuthFailures": 0,
+  "explicitAuthSuccessLabels": 0,
+  "probeReplyFileUtc": "2026-09-10T10:42:27.844395+00:00",
+  "matchingMqttSession": {
+    "sourceRange": "Sheet1!A5:D5",
+    "exportTimestamp": "2026-09-10 12:42:27.117",
+    "message": "MQTT Events: Connected to Broker, active user session"
+  },
+  "laterAppInteraction": {
+    "sourceRange": "Sheet1!A3:D4",
+    "connectedTimestamp": "2026-09-10 12:43:55.401",
+    "timeSetTimestamp": "2026-09-10 12:43:55.910",
+    "registeredPhoneMatches": true
+  },
+  "ownerCaveat": "Owner re-authenticated in the Remote app; do not attribute the later app connection to the diagnostic.",
+  "interpretation": "Probe timestamp and absence of new Auth Fail support candidate identity; explicit controller auth-success evidence is absent. Original timestamps were preserved, so the apparent clock offset is not a uniform export-time conversion."
+}

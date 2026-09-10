@@ -1,0 +1,30 @@
+{
+  "operation": "single identity-only candidate validation",
+  "priorIdentityStatusUsingCandidate": [
+    2,
+    0,
+    0,
+    0
+  ],
+  "liveReplyHeader": [
+    1,
+    1,
+    2,
+    135
+  ],
+  "liveIdentityStatusUsingCandidate": [
+    1,
+    0,
+    0,
+    0
+  ],
+  "liveReplyLength": 12,
+  "replyElapsedMs": 631,
+  "result": "protocol: existing parser rejected nonzero header byte",
+  "identityPacketsSent": 1,
+  "timeSyncPacketsSent": 0,
+  "activationPacketsSent": 0,
+  "productionConfigChanged": false,
+  "authenticationSuccessConfirmedByControllerLog": false,
+  "notes": "Candidate explains known-identity XOR pattern except first displayed nibble. Status semantics and header need controller-log confirmation. No addresses, phone numbers, challenges or credentials included."
+}

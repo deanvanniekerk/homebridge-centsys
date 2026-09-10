@@ -1,0 +1,59 @@
+{
+  "pluginAlias": "Centsys",
+  "pluginType": "platform",
+  "singular": true,
+  "customUi": true,
+  "headerDisplay": "Sign in and configure your gates in the setup wizard.",
+  "schema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "default": "CENTSYS"
+      },
+      "pollInterval": {
+        "title": "Idle polling interval (seconds)",
+        "type": "integer",
+        "default": 15,
+        "minimum": 10,
+        "maximum": 300
+      },
+      "gates": {
+        "type": "array",
+        "maxItems": 10,
+        "items": {
+          "type": "object",
+          "required": ["serialNumber"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "default": "Gate",
+              "minLength": 1,
+              "maxLength": 64
+            },
+            "serialNumber": {
+              "type": "string",
+              "pattern": "^[0-9a-fA-F]{24}$"
+            },
+            "macAddress": {
+              "type": "string",
+              "pattern": "^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$"
+            },
+            "enableControl": {
+              "type": "boolean",
+              "default": false
+            },
+            "controlProfile": {
+              "type": "string",
+              "enum": ["d5-evo-smart-plus"]
+            },
+            "triggerModeConfirmed": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        }
+      }
+    }
+  }
+}

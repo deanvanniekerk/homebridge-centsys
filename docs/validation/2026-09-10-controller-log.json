@@ -1,0 +1,39 @@
+{
+  "source": "Owner-provided controller XLSX export, 10 September 2026; identifying filename omitted",
+  "records": 5000,
+  "authFailureCount": 11,
+  "distinctMalformedIdentities": 1,
+  "activationTimeBarredCount": 2,
+  "macFieldFound": false,
+  "events": [
+    {
+      "sourceRange": "Sheet1!A4:D4",
+      "exportTimestamp": "2026-09-10 10:23:41.774",
+      "category": "Wifi Remote",
+      "message": "Packet Type: Activation Request\nWiFi Remote: WiFi Remote Time Barred",
+      "logPosition": 4997
+    },
+    {
+      "sourceRange": "Sheet1!A5:D5",
+      "exportTimestamp": "2026-09-10 10:23:29.212",
+      "category": "Wifi Remote",
+      "message": "WiFi Remote: Wifi Remote Auth Fail",
+      "logPosition": 4996
+    },
+    {
+      "sourceRange": "Sheet1!A34:D34",
+      "exportTimestamp": "2026-09-10 10:07:49.238",
+      "category": "Wifi Remote",
+      "message": "Packet Type: Activation Request\nWiFi Remote: WiFi Remote Time Barred",
+      "logPosition": 4967
+    },
+    {
+      "sourceRange": "Sheet1!A35:D35",
+      "exportTimestamp": "2026-09-10 10:07:36.920",
+      "category": "Wifi Remote",
+      "message": "WiFi Remote: Wifi Remote Auth Fail",
+      "logPosition": 4966
+    }
+  ],
+  "interpretation": "Controller-level remote identity authentication failed before each of the two activation attempts. Time-barred events do not independently establish a configured access schedule. Earlier successful TLS, identity-reply and telemetry observations did not prove acceptance of the supplied remote identity."
+}

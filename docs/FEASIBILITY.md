@@ -4,9 +4,9 @@ Investigated 9 September 2026. This is a research assessment, not a claim of com
 
 ## Assessment
 
-The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection, and confirms the app displayed Closed, Opening, Open and Closing during the test. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control and state feedback are viable for this installation. Cloud is the chosen implementation route. Third-party authentication/discovery, telemetry decoding/freshness and Homebridge command behavior remain untested.
+The owner reports successful opening and closing through MyCentsys Remote after walking far from the gate, with no Bluetooth connection, and confirms the app displayed Closed, Opening, Open and Closing during the test. Together with the controller reporting Connected to Cloud, this is strong evidence that cloud control and state feedback are viable for this installation. Cloud is the chosen implementation route. Third-party OTP authentication now succeeds, but account discovery returns no operators. A corrected manual serial supports HTTPS status; on 10 September the client captured a full Closed → Opening → Open → Closing → Closed cycle while the owner operated the gate normally. Exact telemetry latency, stale-state behavior and Homebridge commands remain untested. See [live validation](VALIDATION.md).
 
-The product names in the supplied screenshots are **CENTSYS / CENTURION** and **MyCentsys Pro**. The screenshot gives Pro version **1.5.0.213**. No installed motor model or controller firmware version is established by these images.
+The product names in the supplied screenshots are **CENTSYS / CENTURION** and **MyCentsys Pro**. The screenshot gives Pro version **1.5.0.213**. Later Operator Information screenshots identify the installed motor as D5 Evo SMART+, with Core and Comms Interface firmware both 2.1.0.0.
 
 ## Successful remote-control test — 9 September 2026, around 15:41
 
@@ -16,7 +16,7 @@ The owner subsequently confirmed that the app displayed **Closed → Opening →
 
 ## Installation and completed checks
 
-- Suspected model: D5 SMART+, exact controller variant and firmware still unknown.
+- Confirmed by Pro Operator Information at 16:10: D5 Evo SMART+, Core 2.1.0.0 and Comms Interface 2.1.0.0. The serial is stored only in ignored local data.
 - Host: iHost on the same property, approximately 15 metres from the motor. Homebridge runtime/container details remain unverified.
 - MyCentsys Pro: **1.5.0.213**. MyCentsys Remote: **2.1.0.38**.
 - At 14:43 the controller reported Wi-Fi enabled, excellent signal, and **Connected to Cloud: Yes**. Power saving was off; the secondary network was unconfigured. Network identifiers are omitted.
@@ -51,7 +51,7 @@ The combination of Direct and disabled Wi-Fi is consistent with Bluetooth. CENTU
 | MyCentsys cloud | Owner reports remote open/close and Closed/Opening/Open/Closing feedback; public client code exists | Selected route; third-party access, decoding and freshness remain unverified |
 | Direct Bluetooth | Official Pro connection mechanism; no usable CENTSYS BLE implementation established in this investigation | Possible, but authentication, protocol, range and reconnect behavior remain research work |
 | Direct local Wi-Fi API | No supported local LAN API established | Do not equate Wi-Fi connectivity with a local API |
-| Wired local interface | Manufacturer documents trigger inputs and a gate-status output; community hardware projects bridge these into HomeKit | Practical fallback, subject to exact board and electrical interface verification |
+| Wired local interface | Manufacturer documents trigger inputs and a gate-status output; community hardware projects bridge these into HomeKit | Practical fallback, subject to board revision and electrical interface verification |
 
 Official documentation distinguishes BLE operation from SMART+ Wi-Fi connectivity. It describes Wi-Fi configuration as SMART+ only. MyCentsys Pro handles installer configuration, while MyCentsys Remote provides normal control and device status. The remote-support session feature is a separate workflow. [V-Series SMART+ manual, printed page 40](https://www.centsys.co.za/pdf/prod/plus/1408.D.01.0009%20V-Series%20SMARTplus%20Combined%20Manual%2023022026_AP_Web_App.pdf), [SMART ecosystem](https://www.centsys.co.za/smart-ecosystems/), [remote-support sessions](https://www.centsys.co.za/remote-sessions-via-mycentsys-faster-support-fewer-unnecessary-trips/).
 
@@ -59,7 +59,7 @@ The public [centsys_remote integration](https://github.com/Lex-campbell/centsys_
 
 For a wired fallback, CENTURION documents TRG/PED and gate-status wiring to an external G-ULTRA on the D5 EVO SMART. This establishes an intended external interface, not compatibility with any arbitrary relay or GPIO board. An alternative local bridge could use an isolated momentary relay and a properly interfaced status input, or separate position sensors. [Manufacturer wiring guide](https://support.centsys.co.za/portal/en/kb/articles/how-to-wire-a-g-ultra-to-a-d5-evo-smart-sliding-gate-operator).
 
-The independent [HomeSpan D5-Evo project](https://github.com/ixy05/homespan-d5evo-gate) demonstrates the relay-plus-status approach on a different motor generation. It uses pulse-pattern decoding and signal-level conversion. Its voltages, timing and wiring cannot be assumed to apply to the owner's unidentified controller. A single closed-position sensor can answer “fully closed or not”; it cannot independently establish fully open, travel direction or obstruction.
+The independent [HomeSpan D5-Evo project](https://github.com/ixy05/homespan-d5evo-gate) demonstrates the relay-plus-status approach on a different motor generation. It uses pulse-pattern decoding and signal-level conversion. Its voltages, timing and wiring cannot be assumed to apply to the owner's D5 Evo SMART+ controller. A single closed-position sensor can answer “fully closed or not”; it cannot independently establish fully open, travel direction or obstruction.
 
 ## Proposed Homebridge design
 
@@ -92,9 +92,9 @@ AquaTemp's HTTP authentication, thermostat model, polling intervals and absolute
 
 ## Next implementation steps
 
-1. **Build a read-only cloud experiment.** Use the public protocol reference to authenticate, discover the linked gate and retrieve its overview. The silent app retrieval makes actual API discovery a meaningful test. Keep credentials, certificates and raw identifying responses out of the repo/logs.
-2. **Establish identity and state mappings.** Record the actual controller model/firmware, validate our client's open/closed/moving/stopped telemetry and its freshness, and retain sanitized fixtures. Compare against the Closed/Opening/Open/Closing states already observed by the owner in the official app.
+1. **Resolve discovery in the read-only client.** OTP login works; SMART Wi-Fi discovery returns an empty list, and backup/shared-access probes found no entries. The confirmed manual identity yields a Closed overview despite empty discovery. Investigate cloud Remote-user linkage and validate state transitions and timing. Keep credentials, certificates and raw identifying responses out of the repo/logs.
+2. **Establish identity and state mappings.** Use the screenshot-confirmed D5 Evo SMART+ / 2.1.0.0 identity, validate our client's open/closed/moving/stopped telemetry and its freshness, and retain sanitized fixtures. Compare against the Closed/Opening/Open/Closing states already observed by the owner in the official app.
 3. **Implement cloud control and reconciliation.** Validate family-specific trigger semantics and operating mode before issuing commands. Serialize target requests, suppress already-satisfied requests and never replay ambiguous trigger timeouts. Validate actual movement with someone observing the gate; the earlier disabled beam inputs must be considered before unattended closing.
 4. **Integrate Homebridge.** Expose one GarageDoorOpener service, following the AquaTemp lifecycle/configuration conventions. Verify the iHost Node/Homebridge/container environment, then test stale status, reconnects, physical-remote changes, pairing and target-state requests.
 
-Only official-app control has been exercised by the owner. No plugin, third-party account login, agent network scan or agent gate actuation has been performed.
+Only official-app control has been exercised by the owner. The agent completed third-party OTP login and read-only cloud discovery. Discovery returned no operators. Initial manual overview requests used an erroneous transcription; correcting it produced a matching Closed overview. MQTT connection requests also received operator responses, but live telemetry has not been received. No Homebridge hardware test, agent network scan or agent gate actuation has been performed.

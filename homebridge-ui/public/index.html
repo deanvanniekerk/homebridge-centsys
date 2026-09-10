@@ -1,0 +1,257 @@
+<link rel="stylesheet" href="style.css" />
+<div class="centsys-setup">
+  <h3>CENTSYS gate</h3>
+  <p>
+    Connect your MyCentsys account, then choose the gate to show in Apple Home.
+  </p>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <section aria-labelledby="account-heading">
+    <h4 id="account-heading">1. Sign in</h4>
+    <p id="account-state">Checking saved sign-in…</p>
+    <form id="login-form">
+      <label for="phone">Registered phone number</label>
+      <input
+        id="phone"
+        class="form-control"
+        type="tel"
+        autocomplete="tel"
+        placeholder="+27…"
+        required
+      />
+      <div class="two-columns">
+        <div>
+          <label for="region">Region</label
+          ><select id="region" class="form-control">
+            <option value="za">South Africa</option>
+            <option value="au">Australia</option>
+          </select>
+        </div>
+        <div>
+          <label for="channel">Send code through</label
+          ><select id="channel" class="form-control">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="sms">SMS</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Send code</button>
+    </form>
+    <form id="code-form" hidden>
+      <label for="code">One-time code</label>
+      <input
+        id="code"
+        class="form-control"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        pattern="[0-9]{4,10}"
+        maxlength="10"
+        required
+      />
+      <button class="btn btn-primary" type="submit">Sign in</button>
+      <p class="hint">
+        Keep this window open while entering the code. To request another, wait
+        at least one minute and use Send code.
+      </p>
+    </form>
+    <button id="logout" class="btn btn-outline-secondary" type="button" hidden>
+      Sign out of this Homebridge
+    </button>
+  </section>
+  <section aria-labelledby="gate-heading">
+    <h4 id="gate-heading">2. Choose your gate</h4>
+    <label for="configured">Saved gates</label
+    ><select id="configured" class="form-control"></select>
+    <button id="discover" class="btn btn-outline-secondary" type="button">
+      Find account gates
+    </button>
+    <label for="discovered">Account discovery</label
+    ><select id="discovered" class="form-control">
+      <option value="">Choose a discovered gate</option>
+    </select>
+    <p class="hint">
+      Selecting a gate fills its serial and protocol MAC when the service
+      supplies them. If the list is empty or a MAC is missing, use the manual
+      setup help below.
+    </p>
+    <details id="manual-help">
+      <summary>Manual setup: find the serial and address in the apps</summary>
+      <h5>First check account discovery</h5>
+      <ol>
+        <li>
+          Use the same international phone number and region as MyCentsys
+          Remote.
+        </li>
+        <li>
+          In MyCentsys Pro, connect to the operator, open Users, then select
+          MyCentsys Remote. Confirm your number is listed and enabled. An
+          Operator Admin entry alone is a separate role.
+        </li>
+        <li>
+          In MyCentsys Remote, open SMART Settings → SMART Plus Retrieval, then
+          retry Find account gates here. Retrieval may return nothing even when
+          a manually added gate works. You do not need to delete it.
+        </li>
+      </ol>
+      <h5>Copy the controller serial</h5>
+      <ol>
+        <li>
+          Open MyCentsys Pro near the gate, enable phone Bluetooth if needed,
+          and connect to the operator.
+        </li>
+        <li>Open the operator's settings and find Operator Information.</li>
+        <li>
+          Find Serial Number and tap its copy icon. Paste the full 24-character
+          value into Controller serial number below. Do not use the gate name,
+          product model or IP address.
+        </li>
+      </ol>
+      <h5>Copy the Wi-Fi MAC for the D5 Evo SMART+ helper</h5>
+      <ol>
+        <li>In Pro, connect to the operator and open Wi-Fi Settings.</li>
+        <li>
+          Under Advanced Wi-Fi Information, find MAC Address. Copy the six byte
+          pairs into <strong>Wi-Fi MAC from Pro</strong> below.
+        </li>
+        <li>
+          Confirm your exact model in Operator Information is D5 Evo SMART+,
+          then close Pro and Remote. Leave gate Wi-Fi enabled and connected to
+          cloud.
+        </li>
+        <li>
+          After updating this plugin, restart its child bridge before using the
+          helper so setup and monitoring share the session lock.
+        </li>
+        <li>
+          Click Verify Wi-Fi address below. On success the helper fills the
+          protocol MAC. Review the gate and save.
+        </li>
+      </ol>
+      <p>
+        The Wi-Fi MAC is not the protocol MAC. This experimental helper tries
+        the single conversion observed on one D5 Evo SMART+ in South Africa. It
+        must receive accepted identity authentication and fresh live status
+        before applying the address. It sends no movement command and does not
+        search other addresses if the check fails. Other controllers are not
+        supported.
+      </p>
+      <p>
+        A timeout may mean the gate is still reconnecting, rather than an
+        incorrect address. Wait and retry manually. If verification keeps
+        failing, record the model, firmware and app versions for setup
+        assistance. Share identifying screenshots privately, not in a public
+        issue.
+      </p>
+    </details>
+    <form id="gate-form">
+      <label for="gate-name">Name in Apple Home</label
+      ><input
+        id="gate-name"
+        class="form-control"
+        value="Gate"
+        maxlength="64"
+        required
+      />
+      <label for="serial">Controller serial number</label
+      ><input
+        id="serial"
+        class="form-control"
+        autocomplete="off"
+        spellcheck="false"
+        pattern="[0-9A-Fa-f]{24}"
+        maxlength="24"
+        required
+      />
+      <button id="check-gate" class="btn btn-outline-secondary" type="button">
+        Check gate status
+      </button>
+      <p id="gate-state" role="status" aria-live="polite"></p>
+      <details id="wifi-helper">
+        <summary>Use the Wi-Fi MAC from Pro (D5 Evo SMART+ only)</summary>
+        <p>
+          For South African D5 Evo SMART+ operators when discovery supplies no
+          protocol address. Use the steps in Manual setup above.
+        </p>
+        <label for="wifi-mac">Wi-Fi MAC from Pro</label>
+        <input
+          id="wifi-mac"
+          class="form-control"
+          placeholder="AA:BB:CC:DD:EE:FF"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <label class="check-label"
+          ><input id="wifi-model-confirmed" type="checkbox" /> Operator
+          Information confirms my model is D5 Evo SMART+.</label
+        >
+        <button
+          id="verify-wifi"
+          class="btn btn-outline-secondary"
+          type="button"
+        >
+          Verify Wi-Fi address (no movement)
+        </button>
+        <p class="hint">
+          Close Pro and Remote first. Verification can take up to 30 seconds. If
+          another session is busy, retry when it finishes. Only a verified
+          address is applied; saving remains a separate step.
+        </p>
+      </details>
+      <label for="mac">Gate protocol MAC address</label
+      ><input
+        id="mac"
+        class="form-control"
+        placeholder="AA:BB:CC:DD:EE:FF"
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <p id="mac-source" role="status" aria-live="polite"></p>
+      <p class="hint">
+        Use the device address supplied by cloud discovery or independently
+        validated for this controller. The Wi-Fi MAC shown in MyCentsys Pro can
+        be different. This is required for live availability checks even when
+        open/close control is disabled.
+      </p>
+      <details>
+        <summary>Open/close control (experimental)</summary>
+        <p>
+          Live monitoring requires the protocol address above and is supported
+          for D5 Evo SMART+ in South Africa. Open/close control is optional; one
+          complete physical HomeKit cycle has been confirmed on this profile.
+        </p>
+        <label class="check-label"
+          ><input id="enable-control" type="checkbox" /> Enable open/close
+          control</label
+        >
+        <label class="check-label"
+          ><input id="trigger-confirmed" type="checkbox" /> I have confirmed
+          that TRG opens a fully closed gate and closes a fully open
+          gate.</label
+        >
+        <p class="hint">
+          The plugin will reject ambiguous positions and will not automatically
+          repeat an activation whose outcome is unknown. A request may wait up
+          to 30 seconds for fresh gate status before failing; movement can start
+          after a delay. Apple Home reports an obstruction only when detected;
+          missing or disabled beam feedback does not confirm that the driveway
+          is clear.
+        </p>
+      </details>
+      <button class="btn btn-primary" type="submit">Save gate</button>
+      <button
+        id="remove-gate"
+        class="btn btn-outline-danger"
+        type="button"
+        hidden
+      >
+        Remove from Homebridge
+      </button>
+    </form>
+  </section>
+  <p class="hint">
+    Restart this plugin's child bridge, or Homebridge, after saving or changing
+    accounts. Sign-in survives restarts and updates when Homebridge storage is
+    persistent. Codes are never saved.
+  </p>
+</div>
+<script src="app.js"></script>

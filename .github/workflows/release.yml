@@ -1,0 +1,52 @@
+name: Publish npm release
+
+on:
+  workflow_dispatch:
+    inputs:
+      approved_version:
+        description: "Exact version approved for publication (for example 0.1.0-alpha.8)"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/check.yml
+
+  publish:
+    if: github.ref == 'refs/heads/main' && vars.NPM_PUBLISH_ENABLED == 'true'
+    needs: checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: npm
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22.23.2"
+          package-manager-cache: false
+      - run: npm install --global npm@11.5.1
+      - run: npm ci --no-audit --no-fund
+      - name: Check release decision
+        run: node scripts/check-release.mjs
+        env:
+          CENTSYS_RELEASE_APPROVED: ${{ inputs.approved_version }}
+      - name: Build the release artifact
+        run: npm pack --pack-destination /tmp
+      - name: Publish using npm trusted publishing
+        run: |
+          archive=$(node --input-type=module -e "import fs from 'node:fs'; const p=JSON.parse(fs.readFileSync('package.json')); console.log('/tmp/'+p.name.replace('@','').replace('/','-')+'-'+p.version+'.tgz')")
+          tag=$(node -p "require('./package.json').publishConfig.tag")
+          npm publish "$archive" --ignore-scripts --access public --tag "$tag" --provenance

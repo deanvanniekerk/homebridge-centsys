@@ -137,6 +137,14 @@ An offline audit round-tripped both the registered phone and the malformed expor
 
 A single live identity-only diagnostic used the saved authenticated account and this candidate. An independent publish allowlist permitted only connection request, one command 01 and disconnect; time sync and command 03 were blocked. It received a 12-byte identity reply after 631 ms with header `[1,1,2,135]` and decoded status `[1,0,0,0]`. The existing strict parser rejected the nonzero fourth header byte and ended the probe with `protocol`. No time-sync or activation was sent. The change from status 2 to 1 is promising but needs correlation with a new controller log export to establish authentication success and header semantics. Production configuration and plugin code remain unchanged; the candidate and raw reply remain in ignored private storage.
 
+### Second export and app re-authentication — 10 September 2026
+
+The owner supplied a second export and explicitly reported re-authenticating in MyCentsys Remote. Comparison found 64 new entries; the remaining 4,936 timestamps, descriptions and data values match the earlier export exactly. All 11 previous authentication failures remain in the retained overlap; none were added.
+
+The diagnostic reply file was written at 10:42:27.844 UTC (12:42:27 SAST). `Sheet1!A5:D5` records an active MQTT user session at 12:42:27.117, closely matching that probe. `Sheet1!A3:D4` records a later phone connection with the correct account at 12:43:55.401 followed by Time Set at 12:43:55.910. Treat those later entries as a separate app interaction, not as proof that the diagnostic authenticated. No explicit authentication-success label appears among the new entries. The changed identity status and absence of a new Auth Fail support the candidate key, but this is not a definitive success event.
+
+The older event timestamps are unchanged despite the two-hour difference between earlier and later correlations. Do not apply a single UTC/local conversion blindly across the export; the controller clock appears to have changed between the exports. The log also records physical-remote activity during the new interval; those movement records precede our identity-only probe and are not plugin control evidence. [Sanitized correlation](validation/2026-09-10-identity-log-correlation.json) preserves these distinctions. Production code/configuration remain unchanged.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

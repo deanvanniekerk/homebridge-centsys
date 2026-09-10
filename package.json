@@ -1,6 +1,6 @@
 {
   "name": "homebridge-centsys",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "private": true,
   "description": "CENTSYS SMART+ gate monitoring and experimental control for Homebridge",
   "type": "module",

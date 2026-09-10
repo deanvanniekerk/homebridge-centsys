@@ -11,7 +11,7 @@ import { CentsysPlatform } from "../dist/platform.js";
 import { parseConfig } from "../dist/settings.js";
 const serialNumber = "00112233445566778899AABB";
 const config = { platform: "Centsys", gates: [{ name: "Gate", serialNumber }] };
-test("real HAP characteristics restore unavailable, read cloud states, preserve unknown obstruction and reject disabled writes", async (t) => {
+test("real HAP garage service remains readable with cloud state and no obstruction report, and rejects disabled writes", async (t) => {
   let commands = 0;
   const api = Object.assign(new EventEmitter(), {
     hap,
@@ -62,10 +62,17 @@ test("real HAP characteristics restore unavailable, read cloud states, preserve 
       .handleGetRequest(),
     1,
   );
-  await assert.rejects(
-    service
+  assert.equal(
+    service.getCharacteristic(hap.Characteristic.ObstructionDetected)
+      .statusCode,
+    hap.HAPStatus.SUCCESS,
+    "a missing obstruction report must not mark a reachable gate as No Response",
+  );
+  assert.equal(
+    await service
       .getCharacteristic(hap.Characteristic.ObstructionDetected)
       .handleGetRequest(),
+    false,
   );
   await assert.rejects(
     service
@@ -75,6 +82,14 @@ test("real HAP characteristics restore unavailable, read cloud states, preserve 
   assert.equal(commands, 0);
   assert.equal(api.registered, undefined);
   assert.deepEqual(accessory.context, {});
+  t.mock.timers.enable({ apis: ["Date"], now: Date.now() + 60_000 });
+  for (const type of [
+    hap.Characteristic.CurrentDoorState,
+    hap.Characteristic.TargetDoorState,
+    hap.Characteristic.ObstructionDetected,
+  ]) {
+    await assert.rejects(service.getCharacteristic(type).handleGetRequest());
+  }
 });
 test("configuration requires explicit supported control profile, MAC and trigger-mode confirmation", () => {
   assert.equal(parseConfig(config).gates[0].enableControl, false);

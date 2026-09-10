@@ -122,8 +122,11 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
       };
       const obstruction = () => {
         const state = this.#coordinator!.snapshot(gate.serialNumber);
-        if (state.error || state.obstruction === null) throw unavailable();
-        return state.obstruction;
+        if (state.error || state.state === "unknown") throw unavailable();
+        // HomeKit has no unknown Boolean. Report detected obstructions only;
+        // absence of a report is not clearance for an activation. Keep the
+        // coordinator's nullable telemetry unchanged for command checks.
+        return state.obstruction === true;
       };
       service.getCharacteristic(C.CurrentDoorState).onGet(current);
       service

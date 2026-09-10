@@ -76,6 +76,17 @@ All 43 local tests pass on Node 24.15.0. Automated tests cover the real Homebrid
 
 MQTT activation uses a fresh session, decoded gate telemetry, an explicit supported-family/TRG-mode opt-in and a single QoS-0 command. The complete Homebridge command attempt has an eight-second budget. Ambiguous outcomes are not replayed. Automatic actuation is disabled by default. Time sync, command acceptance and actual movement through this code remain unverified on hardware.
 
+### iHost installation and Apple Home availability — 10 September 2026
+
+- Installed alpha.0 from a SHA-256-verified development tarball on Ubuntu 24.04.1 ARM32, Node 22.23.2 and Homebridge 2.4.0. A full Homebridge backup was created first.
+- Completed WhatsApp OTP login through the real Homebridge custom UI. A manual identity status check returned Closed, and the configuration was saved with control disabled. Credentials remain in persistent private storage, outside the configuration and repository.
+- A dedicated CENTSYS child bridge started after the initial Homebridge restart. AquaTemp, Midea and Sunsynk retained their installed versions and all bridges showed Running.
+- The owner paired the bridge and reported **No Response** in Apple Home. At the same time, Homebridge’s Accessories page showed **Home Gate: Closed**.
+- A regression using real HAP characteristics reproduced status `-70402` (communication failure) on ObstructionDetected while CurrentDoorState and TargetDoorState both read Closed. The old mapping treated missing obstruction telemetry as transport failure.
+- Alpha.1 reports detected obstruction as a Boolean while retaining nullable telemetry internally. Its regression passes with a readable gate and missing beam feedback; stale gate data still makes all three required state characteristics unavailable. Command checks and the control-disabled configuration are unchanged. Installed alpha.1 on iHost and restarted only the CENTSYS child bridge. Apple Home then showed **Home Gate — Closed**, verified directly in the macOS Home app. The saved login survived the update/restart. On-host metadata confirmed auth directory mode 0700 and credential files 0600. All 43 local tests passed before deployment.
+
+No agent gate activation has been sent. Device identities, account details, pairing credentials and private backups are excluded from this report.
+
 ## Remaining before routine Homebridge control
 
-Install the alpha on the target iHost Homebridge instance and verify settings, persistent login, Apple Home availability and status updates. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.
+Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

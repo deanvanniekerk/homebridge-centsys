@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. It has not yet been paired and exercised on the owner's iHost. npm publication remains disabled; install a development tarball for testing.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. It is installed on the owner's iHost and Apple Home displays Closed. Moving-state updates in Apple Home and physical activation still need an observed test. npm publication remains disabled; install a development tarball for testing.
 
 ## Requirements and package
 
@@ -9,7 +9,7 @@ This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wiz
 - Internet access from Homebridge to CENTSYS HTTPS and MQTT services, and GitHub for first-login bootstrap preparation.
 - Homebridge storage mounted on persistent disk. For containers, persist the Homebridge storage volume, not the plugin's install directory.
 
-From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.0.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A child bridge is recommended to isolate plugin restarts; this still needs validation on the actual iHost runtime.
+From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.1.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
 
 ## Browser setup
 
@@ -37,7 +37,7 @@ The accessory maps HTTP Open/Closed/Opening/Closing to HomeKit's corresponding d
 
 The default idle poll is 15 seconds. A newly observed moving state or a control request enables a bounded 60-second observation period with nominal two-second delays. Failures back off instead of accelerating polls. This policy is an initial implementation; vendor rate limits and long-running behavior have not been validated.
 
-Obstruction is **unknown** unless available MQTT telemetry supports a known result. Disabled beams do not imply a clear path. The required HomeKit obstruction characteristic returns a communication error for unknown, which may affect how Apple Home presents availability. The actual iHost/Apple Home display must be checked before treating this as a finished user experience.
+Obstruction remains **unknown internally** unless fresh MQTT telemetry supports a known result. HomeKit requires a Boolean: the plugin reports `true` only for a detected obstruction, otherwise `false` means **no obstruction reported**, not a confirmed clear path. Disabled or missing beam feedback is not a safety measurement. Actual unavailable/stale gate state still returns a communication error. Alpha.0 incorrectly returned that error for missing obstruction feedback even while the gate state was readable, producing an Apple Home No Response report; alpha.1 corrects this presentation mapping without changing command checks. See [Apple’s obstruction characteristic definition](https://developer.apple.com/documentation/homekit/hmcharacteristictypeobstructiondetected).
 
 ## Experimental control
 

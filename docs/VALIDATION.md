@@ -159,6 +159,8 @@ Alpha.5 was installed on iHost from a SHA-256-verified tarball; npm changed one 
 
 After renewed owner readiness, one open request was sent through Apple Home. The installed plugin logged an activation reply at 11:01:51 UTC with `attempt=1, code=1, configVersion=0`. No configuration-version retry was needed. Apple Home was observed showing Opening and subsequently Open. This is the first accepted activation reply through the plugin. Physical observation by the owner is pending; no close request has been sent.
 
+The owner confirmed that the gate physically opened fully and authorized one close request with the driveway clear. That HomeKit close returned `attempt=1, code=1, configVersion=0` at 11:03:33 UTC. Apple Home was observed showing Closing and then Closed. Neither request needed negotiation or replay. Physical closure confirmation is pending.
+
 ## Remaining before routine Homebridge control
 
-Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.
+Confirm physical closure for the accepted close request, then validate offline/stale behavior and target reconciliation on the installation. Apple Home has now displayed both movement directions and endpoints, and the owner confirmed physical opening. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

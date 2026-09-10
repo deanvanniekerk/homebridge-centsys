@@ -256,3 +256,9 @@ The form was closed without saving, because the address already matched and veri
 The release procedure now mirrors AquaTemp: manual workflow dispatch on main with an exact approved version, reusable CI, an npm environment requiring the maintainer's review, a repository publish-enable variable, and OIDC trusted publishing with provenance. CI covers Node 22.23.2, current Node 22/24 and emulated ARMv7 using AquaTemp's pinned container/action references. The release guard supports CENTSYS alpha versions as well as beta/stable channels and rejects missing or mismatched approval, registry, access and dist-tags. All 73 local tests pass.
 
 The GitHub npm environment was configured with the maintainer reviewer and a main-only branch policy. NPM_PUBLISH_ENABLED is false pending the separate npm trusted-publisher setup. No local npm login is required by the routine workflow. The GitHub release remains a draft; no npm publication or further iHost change occurred.
+
+### First public npm publication
+
+The maintainer published `homebridge-centsys@0.1.0-alpha.8` manually. Registry verification confirmed version alpha.8 and gitHead `fd05d588b93a40b54bfa194a7bf1491cbfc2007c`. The downloaded registry archive matches the registry SHA-512 integrity and every unpacked file matches the prepared release archive. No private owner/device identifiers were found in that archive. The exact-commit CI passed all Node 22.23.2/22/24 jobs and emulated ARMv7.
+
+The registry exposed both alpha and latest tags pointing to alpha.8. Removing latest was attempted to retain the intended alpha-only channel, but npm required interactive two-factor authentication and rejected the operation; the tag change remains pending. This first manual publication has no registry provenance attestation. Future publications use the documented GitHub Actions/OIDC procedure once the package-specific trusted publisher is configured. GitHub publication remains disabled in the meantime.

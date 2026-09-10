@@ -11,7 +11,7 @@ The workflow uses npm trusted publishing with provenance, without a long-lived n
 - Repository variable `NPM_PUBLISH_ENABLED=true` enables publication. Keep it `false` until npm publisher configuration is complete.
 - GitHub-hosted runner: Node 22.23.2 and npm 11.5.1; permissions `contents: read` and `id-token: write` for the publish job.
 
-The npm-side trust relationship is not yet configured. The public registry returned no package on the preparation date. Complete package ownership/initial setup through npm's account UI before enabling this workflow; do not assume AquaTemp's package authorization covers CENTSYS. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for the package-specific setup. Local `npm whoami` is not an OIDC readiness check and local login is not part of the routine release procedure.
+The npm-side trust relationship is not yet configured. The maintainer completed the first manual publication of `0.1.0-alpha.8` on 2026-09-10. Configure its package-specific publisher in npm's account UI before enabling this workflow; do not assume AquaTemp's package authorization covers CENTSYS. See [npm trusted publishing](https://docs.npmjs.com/trusted-publishers/) for the package-specific setup. Local `npm whoami` is not an OIDC readiness check and local login is not part of the routine release procedure.
 
 ## Prepare and publish
 

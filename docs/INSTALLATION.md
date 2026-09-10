@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. The alpha.8 public release is being prepared; install a development tarball until npm publication completes.
+This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and experimental MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. The first public release, alpha.8, is now available on npm.
 
 ## Requirements and package
 
@@ -11,7 +11,7 @@ This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wiz
 
 From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.8.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
 
-Once the public alpha is published, use `npm install homebridge-centsys@alpha` in the same Homebridge npm environment. Choose the alpha version explicitly when installing through a version-selection UI. The initial release is experimental and has no stable release recommendation. Alpha.8 changes release metadata and documentation; its gate logic matches the alpha.7 build tested on iHost.
+Use `npm install homebridge-centsys@alpha` in the same Homebridge npm environment. Choose the alpha version explicitly when installing through a version-selection UI. The initial release is experimental and has no stable release recommendation. Alpha.8 changes release metadata and documentation; its gate logic matches the alpha.7 build tested on iHost.
 
 ## Browser setup
 

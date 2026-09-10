@@ -103,6 +103,12 @@ A diagnostic with activation explicitly blocked traced the installed client thro
 
 Alpha.3 recognizes this exact eight-byte command-06 envelope in addition to the existing zero-byte variant. Identity and activation response parsing remain unchanged, as do the fresh-state check, account recheck and single-publish rule. Synthetic tests reproduce the rejected envelope and verify that different flags or lengths cannot advance to activation. All 46 tests passed. A checksum-verified alpha.3 tarball was installed on iHost. A probe using that installed code received telemetry at 13.904 seconds and command 06 at 14.051 seconds, then reached the final pre-activation callback at 14.053 seconds. The callback deliberately stopped the session; a second publish guard independently blocked command 03. The probe completed with `activated: false`. Only the CENTSYS child bridge was restarted, its log confirmed alpha.3, and Apple Home remained Closed. This verifies progress through the handshake, not command acceptance or physical movement; those still require an owner-observed test.
 
+### First activation response — 10 September 2026
+
+Following renewed owner readiness, one Apple Home open request was sent on alpha.3. The runtime reported `command-rejected` at 10:07:49 UTC, and Apple Home returned to Closed. Unlike the first two attempts, this path reached the single activation publish and parsed a command-04 reply whose decoded response code was not success. No automatic retry or close request was sent. Physical observation is pending.
+
+The current Boolean response decoder discards the numeric rejection code and returned configuration version. The existing log therefore cannot distinguish a configuration mismatch from another rejection. The pinned reference decodes both fields and identifies code 7 as configuration mismatch, but this has not been established for this attempt. A future supervised attempt needs narrowly scoped capture of those two decoded numeric fields; the current evidence does not justify changing the activation packet or adding retries.
+
 ## Remaining before routine Homebridge control
 
 Observe moving and endpoint status updates in Apple Home. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

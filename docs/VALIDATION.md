@@ -256,3 +256,13 @@ The form was closed without saving, because the address already matched and veri
 The release procedure now mirrors AquaTemp: manual workflow dispatch on main with an exact approved version, reusable CI, an npm environment requiring the maintainer's review, a repository publish-enable variable, and OIDC trusted publishing with provenance. CI covers Node 22.23.2, current Node 22/24 and emulated ARMv7 using AquaTemp's pinned container/action references. The release guard supports CENTSYS alpha versions as well as beta/stable channels and rejects missing or mismatched approval, registry, access and dist-tags. All 73 local tests pass.
 
 The GitHub npm environment was configured with the maintainer reviewer and a main-only branch policy. NPM_PUBLISH_ENABLED is false pending the separate npm trusted-publisher setup. No local npm login is required by the routine workflow. The GitHub release remains a draft; no npm publication or further iHost change occurred.
+
+### First public npm publication
+
+The maintainer published `homebridge-centsys@0.1.0-alpha.8` manually. Registry verification confirmed version alpha.8 and gitHead `fd05d588b93a40b54bfa194a7bf1491cbfc2007c`. The downloaded registry archive matches the registry SHA-512 integrity and every unpacked file matches the prepared release archive. No private owner/device identifiers were found in that archive. The exact-commit CI passed all Node 22.23.2/22/24 jobs and emulated ARMv7.
+
+The registry exposed both alpha and latest tags pointing to alpha.8. The initial attempt to remove latest required interactive two-factor authentication. The maintainer subsequently completed authentication, but the registry returned HTTP 400 for the DELETE request. Both tags remain; the registry reason is unconfirmed and no further deletion retry is planned. This first manual publication has no registry provenance attestation. Future publications use the documented GitHub Actions/OIDC procedure once the package-specific trusted publisher is configured. GitHub publication remains disabled in the meantime.
+
+### Trusted publisher configured (2026-09-10)
+
+The maintainer supplied confirmation of the npm trusted publisher for `deanvanniekerk/homebridge-centsys`, workflow `release.yml`, environment `npm`, label `CENTSYS GitHub Actions`, with direct publish permission. The repository variable `NPM_PUBLISH_ENABLED` was enabled. Manual dispatch on main and the environment reviewer remain required. No workflow publication was dispatched; alpha.8 already exists and has no provenance attestation. The next unused version will provide the first end-to-end OIDC publishing check.

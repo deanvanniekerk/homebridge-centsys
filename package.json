@@ -1,7 +1,6 @@
 {
   "name": "homebridge-centsys",
-  "version": "0.1.0-alpha.7",
-  "private": true,
+  "version": "0.1.0-alpha.8",
   "description": "CENTSYS SMART+ gate monitoring and experimental control for Homebridge",
   "type": "module",
   "engines": {
@@ -21,7 +20,8 @@
     "check": "npm run format:check && npm test",
     "prepare:auth": "npm run build && node dist/prepare-auth.js",
     "diagnose": "npm run build && node dist/cli.js",
-    "prepack": "npm run build"
+    "prepack": "npm run build",
+    "prepublishOnly": "npm run check"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
@@ -50,5 +50,15 @@
     "THIRD_PARTY_NOTICES.md",
     "docs/INSTALLATION.md",
     "docs/VALIDATION.md"
-  ]
+  ],
+  "author": "Dean van Niekerk",
+  "homepage": "https://github.com/deanvanniekerk/homebridge-centsys#readme",
+  "bugs": {
+    "url": "https://github.com/deanvanniekerk/homebridge-centsys/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "tag": "alpha",
+    "registry": "https://registry.npmjs.org/"
+  }
 }

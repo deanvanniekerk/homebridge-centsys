@@ -8,9 +8,9 @@ The tested controller is **D5 Evo SMART+**, Core and Comms Interface firmware **
 
 ## Homebridge setup
 
-Use Homebridge 2.4.x and Node 22 or 24. Install the development tarball, open the plugin's settings, and follow the phone/OTP wizard. Select a discovered gate to fill its serial and available protocol MAC, or follow the [manual setup guide](docs/INSTALLATION.md#if-discovery-is-empty-or-the-protocol-mac-is-missing). For a D5 Evo SMART+ in South Africa, the experimental fallback takes the serial and Wi-Fi MAC from MyCentsys Pro and fills the protocol MAC only after controller authentication and live status succeed. The helper has passed a live identity/status verification on the tested installation; discovery remains empty there. Check status, save and restart. Session credentials live in Homebridge's persistent storage, so restarting or updating the plugin does not require another login unless the vendor rejects the session.
+Use Homebridge 2.4.x and Node 22 or 24. The first public alpha is being prepared. Once published, install `homebridge-centsys@alpha` in the npm environment used by Homebridge, then restart Homebridge, open the plugin's settings and follow the phone/OTP wizard. Until then, use a development tarball as described in the installation guide. Select a discovered gate to fill its serial and available protocol MAC, or follow the [manual setup guide](docs/INSTALLATION.md#if-discovery-is-empty-or-the-protocol-mac-is-missing). For a D5 Evo SMART+ in South Africa, the experimental fallback takes the serial and Wi-Fi MAC from MyCentsys Pro and fills the protocol MAC only after controller authentication and live status succeed. The helper has passed a live identity/status verification on the tested installation; discovery remains empty there. Check status, save and restart. Session credentials live in Homebridge's persistent storage, so restarting or updating the plugin does not require another login unless the vendor rejects the session.
 
-See [installation, storage and control limitations](docs/INSTALLATION.md). No npm release has been published, and `private: true` prevents accidental publication.
+See [installation, storage and control limitations](docs/INSTALLATION.md). No npm release has been published yet. Release metadata targets the `alpha` channel; routine stable installs are not the intended path for this experimental release.
 
 ## Development and diagnostics
 
@@ -31,9 +31,9 @@ npm run diagnose -- status-known
 
 `status-known` requires an owner-only `.local/auth/operator.json` containing your own controller serial. CLI credentials are separate from deployed Homebridge credentials. All diagnostic output omits identifying account/device fields and labels HTTP readings as potentially cached.
 
-- [Diagnostic CLI guide](docs/DIAGNOSTICS.md)
+- [Diagnostic CLI guide](https://github.com/deanvanniekerk/homebridge-centsys/blob/codex/cloud-read-client/docs/DIAGNOSTICS.md)
 - [Implementation and validation evidence](docs/VALIDATION.md)
-- [Feasibility and design](docs/FEASIBILITY.md)
-- [Protocol research](docs/research/connectivity.md)
+- [Feasibility and design](https://github.com/deanvanniekerk/homebridge-centsys/blob/codex/cloud-read-client/docs/FEASIBILITY.md)
+- [Protocol research](https://github.com/deanvanniekerk/homebridge-centsys/blob/codex/cloud-read-client/docs/research/connectivity.md)
 
 Independent project, not affiliated with CENTURION, Apple or Homebridge. Adaptation credits and the upstream MIT license are in [third-party notices](THIRD_PARTY_NOTICES.md).

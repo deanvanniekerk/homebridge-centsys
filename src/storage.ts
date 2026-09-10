@@ -21,7 +21,8 @@ export interface Session {
   token: string;
 }
 
-type PrivateFile = "session.json" | "bootstrap-token" | "operator.json";
+type PrivateFile =
+  "session.json" | "bootstrap-token" | "operator.json" | "otp-attempt.json";
 
 /** Explicit SMART+ identity from the owner's controller screen, never guessed. */
 export async function readKnownOperator(
@@ -156,6 +157,26 @@ export async function forgetSession(directory = authDirectory): Promise<void> {
       error.code === "ENOENT"
     )
       return;
+    throw new CentsysError("local-storage");
+  }
+}
+
+/** Absence is distinct from corrupt, insecure or unreadable credentials. */
+export async function hasPrivate(
+  name: PrivateFile,
+  directory = authDirectory,
+): Promise<boolean> {
+  try {
+    await lstat(join(directory, name));
+    return true;
+  } catch (error) {
+    if (
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      error.code === "ENOENT"
+    )
+      return false;
     throw new CentsysError("local-storage");
   }
 }

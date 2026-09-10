@@ -1,6 +1,6 @@
 # Read-only cloud diagnostics
 
-This is the first development slice of the Homebridge plugin, not an installable Homebridge accessory. It cannot trigger the gate, change controller configuration, enroll users or send MQTT activation packets. It performs HTTPS OTP authentication and reads the SMART Wi-Fi discovery/overview endpoints. GSM/ULTRA, shared-access discovery and MQTT telemetry are outside this slice.
+The diagnostic CLI is a separate, read-only tool. It cannot trigger the gate, change controller configuration, enroll users or send MQTT activation packets. It performs HTTPS OTP authentication and reads the SMART Wi-Fi discovery/overview endpoints. For the Homebridge accessory and settings UI, see [installation](INSTALLATION.md). GSM/ULTRA, shared-access discovery and MQTT telemetry are outside this CLI.
 
 ## Setup and login
 

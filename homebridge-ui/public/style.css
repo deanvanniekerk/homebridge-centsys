@@ -1,0 +1,52 @@
+.centsys-setup {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 8px 4px;
+}
+.centsys-setup section {
+  border-top: 1px solid var(--bs-border-color, #aaa);
+  margin-top: 22px;
+  padding-top: 18px;
+}
+.centsys-setup label:not(.check-label) {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+.centsys-setup .btn {
+  margin: 14px 6px 8px 0;
+}
+.centsys-setup .hint {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 8px;
+}
+.centsys-setup .two-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.centsys-setup .check-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 12px 0;
+}
+.centsys-setup details {
+  margin: 14px 0;
+  padding: 12px;
+  border: 1px solid var(--bs-border-color, #aaa);
+  border-radius: 6px;
+}
+.centsys-setup #notice {
+  min-height: 1.5em;
+}
+.centsys-setup [hidden] {
+  display: none !important;
+}
+@media (max-width: 440px) {
+  .centsys-setup .two-columns {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+}

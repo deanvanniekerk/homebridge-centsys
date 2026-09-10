@@ -1,0 +1,145 @@
+<link rel="stylesheet" href="style.css" />
+<div class="centsys-setup">
+  <h3>CENTSYS gate</h3>
+  <p>
+    Connect your MyCentsys account, then choose the gate to show in Apple Home.
+  </p>
+  <p id="notice" role="status" aria-live="polite"></p>
+  <section aria-labelledby="account-heading">
+    <h4 id="account-heading">1. Sign in</h4>
+    <p id="account-state">Checking saved sign-in…</p>
+    <form id="login-form">
+      <label for="phone">Registered phone number</label>
+      <input
+        id="phone"
+        class="form-control"
+        type="tel"
+        autocomplete="tel"
+        placeholder="+27…"
+        required
+      />
+      <div class="two-columns">
+        <div>
+          <label for="region">Region</label
+          ><select id="region" class="form-control">
+            <option value="za">South Africa</option>
+            <option value="au">Australia</option>
+          </select>
+        </div>
+        <div>
+          <label for="channel">Send code through</label
+          ><select id="channel" class="form-control">
+            <option value="whatsapp">WhatsApp</option>
+            <option value="sms">SMS</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit">Send code</button>
+    </form>
+    <form id="code-form" hidden>
+      <label for="code">One-time code</label>
+      <input
+        id="code"
+        class="form-control"
+        type="text"
+        inputmode="numeric"
+        autocomplete="one-time-code"
+        pattern="[0-9]{4,10}"
+        maxlength="10"
+        required
+      />
+      <button class="btn btn-primary" type="submit">Sign in</button>
+      <p class="hint">
+        Keep this window open while entering the code. To request another, wait
+        at least one minute and use Send code.
+      </p>
+    </form>
+    <button id="logout" class="btn btn-outline-secondary" type="button" hidden>
+      Sign out of this Homebridge
+    </button>
+  </section>
+  <section aria-labelledby="gate-heading">
+    <h4 id="gate-heading">2. Choose your gate</h4>
+    <label for="configured">Saved gates</label
+    ><select id="configured" class="form-control"></select>
+    <button id="discover" class="btn btn-outline-secondary" type="button">
+      Find account gates
+    </button>
+    <label for="discovered">Account discovery</label
+    ><select id="discovered" class="form-control">
+      <option value="">Choose a discovered gate</option>
+    </select>
+    <p class="hint">
+      An empty list can occur even when the app controls your gate. Copy its
+      Serial Number from Pro → Operator Information below.
+    </p>
+    <form id="gate-form">
+      <label for="gate-name">Name in Apple Home</label
+      ><input
+        id="gate-name"
+        class="form-control"
+        value="Gate"
+        maxlength="64"
+        required
+      />
+      <label for="serial">Controller serial number</label
+      ><input
+        id="serial"
+        class="form-control"
+        autocomplete="off"
+        spellcheck="false"
+        pattern="[0-9A-Fa-f]{24}"
+        maxlength="24"
+        required
+      />
+      <button id="check-gate" class="btn btn-outline-secondary" type="button">
+        Check gate status
+      </button>
+      <p id="gate-state" role="status" aria-live="polite"></p>
+      <details>
+        <summary>Open/close control (experimental)</summary>
+        <p>
+          Status monitoring works without this option. Control currently targets
+          D5 Evo SMART+ in South Africa and still needs an observed hardware
+          activation test.
+        </p>
+        <label class="check-label"
+          ><input id="enable-control" type="checkbox" /> Enable open/close
+          control</label
+        >
+        <label for="mac">Gate Wi-Fi MAC address</label
+        ><input
+          id="mac"
+          class="form-control"
+          placeholder="AA:BB:CC:DD:EE:FF"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <label class="check-label"
+          ><input id="trigger-confirmed" type="checkbox" /> I have confirmed
+          that TRG opens a fully closed gate and closes a fully open
+          gate.</label
+        >
+        <p class="hint">
+          The plugin will reject ambiguous positions and will not automatically
+          repeat an activation whose outcome is unknown.
+        </p>
+      </details>
+      <button class="btn btn-primary" type="submit">Save gate</button>
+      <button
+        id="remove-gate"
+        class="btn btn-outline-danger"
+        type="button"
+        hidden
+      >
+        Remove from Homebridge
+      </button>
+    </form>
+  </section>
+  <p class="hint">
+    Restart this plugin's child bridge, or Homebridge, after saving or changing
+    accounts. Sign-in survives restarts and updates when Homebridge storage is
+    persistent. Codes are never saved.
+  </p>
+</div>
+<script src="app.js"></script>

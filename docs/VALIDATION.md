@@ -5,7 +5,9 @@
 - TypeScript client for SendOtp, ValidateOtp, GetDevicesByRemoteUserNumber and GetOperatorOverview.
 - Explicit OTP login, private session persistence, sanitized single-shot status diagnostics and local logout.
 - Source-pinned local bootstrap preparation with SHA-256 verification.
-- Strict discovery/overview parsing, no command API, bounded HTTP requests, cancellation and no redirects/retries.
+- Strict discovery/overview parsing, bounded HTTP requests, cancellation and no redirects/retries.
+- Homebridge settings UI with explicit OTP login, private persistent sessions, discovery and manual gate setup.
+- GarageDoorOpener accessory, unavailable-state handling, bounded polling and experimental opt-in MQTT control for the tested D5 Evo SMART+ family in ZA.
 - CI checks on Node 22 and 24, with no account credentials or hardware access.
 
 ## Evidence
@@ -64,6 +66,16 @@ This demonstrates that HTTPS overview can deliver both moving and endpoint state
 
 A sanitized capture summary is stored in [the state-cycle evidence file](validation/2026-09-10-http-state-cycle.json). Raw local samples contain only request/receipt timestamps, state codes and row presence, and remain under ignored `.local/`.
 
-## Remaining before Homebridge control
+### Homebridge alpha and corrected MQTT handshake — 10 September 2026
 
-Investigate empty discovery while using the confirmed manual identity; extend the successful HTTP cycle test to establish timing and stale/offline behavior; implement MQTT certificate handling and telemetry; validate family-specific activation semantics and target-state reconciliation; then build and test the Homebridge accessory and iHost deployment. No npm release or Homebridge compatibility claim is made by this checkpoint.
+The earlier identity probe supplied the wrong MQTT ResponseTopic. Using `userRemoteTriggerResponse` for command 01 produced a 12-byte command-02 challenge and a 68-byte deviceOverview message. The production TypeScript session then independently returned Closed and 13.4 V with `activated: false`. The decoded beam status was unknown because the installation's beams are disabled. TLS certificate and server-name verification remained enabled. No time-sync or activation packet was sent during these read-only checks.
+
+The alpha implements custom Homebridge UI authentication, private session storage, manual/discovered gate configuration, HTTPS monitoring and an optional MQTT command path. The UI requests an OTP only on an explicit button press; invalid codes preserve an existing saved session. Automatic token renewal has not been established; a rejected session requires the owner to sign in again.
+
+All 43 local tests pass on Node 24.15.0. Automated tests cover the real Homebridge HAP characteristic objects, UI-server IPC, OTP expiry/attempt limits, private storage, HTTP wire contracts, synthetic MQTT exchanges, missing/stale state, concurrent commands and late HTTP responses. The browser preview uses a synthetic Homebridge API and exercised login, empty discovery, manual status check and saving a gate. A clean production-only installation of the generated tarball also loaded the plugin registration, bundled CA and UI IPC server successfully. These checks do not constitute a deployment on iHost or a live OTP test through the finished UI.
+
+MQTT activation uses a fresh session, decoded gate telemetry, an explicit supported-family/TRG-mode opt-in and a single QoS-0 command. The complete Homebridge command attempt has an eight-second budget. Ambiguous outcomes are not replayed. Automatic actuation is disabled by default. Time sync, command acceptance and actual movement through this code remain unverified on hardware.
+
+## Remaining before routine Homebridge control
+
+Install the alpha on the target iHost Homebridge instance and verify settings, persistent login, Apple Home availability and status updates. Perform an owner-observed activation test, including command acknowledgement, then test offline/stale behavior and target reconciliation. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

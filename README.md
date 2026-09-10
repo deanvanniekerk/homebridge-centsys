@@ -1,28 +1,39 @@
 # homebridge-centsys
 
-A Homebridge plugin in development for controlling CENTURION / CENTSYS gates from Apple Home, with open/close control and gate-state reporting.
+A Homebridge plugin in development for CENTURION / CENTSYS SMART+ gates, with a browser login wizard, gate-state monitoring and experimental open/close control.
 
-**Status: read-only cloud client implemented; Homebridge integration pending.** The owner reports successful remote open/close through MyCentsys Remote outside nearby Bluetooth range, with displayed Closed, Opening, Open and Closing states during the test. Live OTP login succeeded, but SMART Wi-Fi discovery returned no operators for the account. Using a manually configured serial, the HTTPS client captured Closed → Opening → Open → Closing → Closed during an owner-observed cycle on 10 September 2026. The client has 27 passing local tests; exact telemetry latency and stale-state handling remain unverified. There are no gate commands or installable Homebridge accessories yet, and npm publication is disabled.
+**Status: installable alpha; gate activation and iHost pairing still need an observed test.** HTTPS monitoring captured Closed → Opening → Open → Closing → Closed during an owner-observed cycle. The production MQTT reader has also retrieved Closed and 13.4 V from the gate. Automatic account discovery is empty on this installation, so setup supports a manually supplied serial.
 
-The intended accessory provides open/close requests and observed gate state through Homebridge on iHost. The current diagnostic client supports phone/OTP authentication, discovery and HTTPS operator overviews. Pro identifies the installation as D5 Evo SMART+, with Core and Comms Interface firmware 2.1.0.0. Use `status-known` with a privately configured serial when automatic discovery is empty.
+The tested controller is **D5 Evo SMART+**, Core and Comms Interface firmware **2.1.0.0**. Experimental command handling is limited to this profile in South Africa and is disabled by default. It requires a fresh MQTT session, serializes commands and never automatically repeats an uncertain activation. The full activation sequence has not yet been exercised on hardware.
 
-## Run the diagnostic client
+## Homebridge setup
 
-Use Node.js 22 or later. From this repository:
+Use Homebridge 2.4.x and Node 22 or 24. Install the development tarball, open the plugin's settings, and follow the phone/OTP wizard. Select a discovered gate or enter its serial, check status, save and restart. Session credentials live in Homebridge's persistent storage, so restarting or updating the plugin does not require another login unless the vendor rejects the session.
+
+See [installation, storage and control limitations](docs/INSTALLATION.md). No npm release has been published, and `private: true` prevents accidental publication.
+
+## Development and diagnostics
 
 ```sh
 npm ci
+npm run check
+npm pack
+```
+
+The independent research CLI remains available:
+
+```sh
 npm run prepare:auth
 npm run diagnose -- login
 npm run diagnose -- status
+npm run diagnose -- status-known
 ```
 
-Login asks for your registered international phone number, region, OTP delivery channel and code. Input is hidden. Credentials stay under ignored `.local/auth/` with owner-only permissions. The status report omits names, phone numbers, serials, MACs and tokens. It labels readings as potentially cached cloud data, not a live MQTT stream.
+`status-known` requires an owner-only `.local/auth/operator.json` containing your own controller serial. CLI credentials are separate from deployed Homebridge credentials. All diagnostic output omits identifying account/device fields and labels HTTP readings as potentially cached.
 
-See the [diagnostic guide](docs/DIAGNOSTICS.md) for setup details, limitations and error handling. Run `npm run check` for formatting, TypeScript compilation and tests.
+- [Diagnostic CLI guide](docs/DIAGNOSTICS.md)
+- [Implementation and validation evidence](docs/VALIDATION.md)
+- [Feasibility and design](docs/FEASIBILITY.md)
+- [Protocol research](docs/research/connectivity.md)
 
-- [Feasibility assessment and proposed next steps](docs/FEASIBILITY.md)
-- [Connectivity and existing protocol implementation research](docs/research/connectivity.md)
-- [Implementation and validation status](docs/VALIDATION.md)
-
-An independent project, not affiliated with CENTURION, Apple or Homebridge. Protocol adaptation credits and the upstream MIT notice are in [third-party notices](THIRD_PARTY_NOTICES.md).
+Independent project, not affiliated with CENTURION, Apple or Homebridge. Adaptation credits and the upstream MIT license are in [third-party notices](THIRD_PARTY_NOTICES.md).

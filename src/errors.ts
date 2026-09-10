@@ -9,9 +9,22 @@ export type ErrorCode =
   | "timeout"
   | "cancelled"
   | "protocol"
-  | "local-storage";
+  | "local-storage"
+  | "control-disabled"
+  | "state-unavailable"
+  | "busy"
+  | "command-uncertain"
+  | "command-rejected";
 
 const messages: Record<ErrorCode, string> = {
+  "control-disabled": "Gate control is not enabled for this configuration.",
+  "state-unavailable":
+    "A usable gate state is unavailable. The command was not sent.",
+  busy: "A gate operation is already in progress.",
+  "command-uncertain":
+    "The activation outcome is unknown. Check the gate before retrying.",
+  "command-rejected":
+    "The gate rejected the activation. No automatic retry was sent.",
   configuration: "Invalid configuration or input.",
   authentication: "Authentication was rejected. Sign in again.",
   "otp-rejected": "The one-time code was rejected.",

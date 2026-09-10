@@ -16,7 +16,8 @@ type Operation =
   | "SendOtp"
   | "ValidateOtp"
   | "GetDevicesByRemoteUserNumber"
-  | "GetOperatorOverview";
+  | "GetOperatorOverview"
+  | "GetCertificate";
 
 export interface ClientOptions {
   mobileNumber: string;
@@ -166,6 +167,30 @@ export class CentsysReadClient {
     }
     this.#sessionToken = token;
     return token;
+  }
+
+  async certificate(
+    signal?: AbortSignal,
+  ): Promise<{ pfx: Buffer; password: string }> {
+    const data = record(
+      await this.#request("GetCertificate", {}, true, signal),
+    );
+    const fields = Object.fromEntries(
+      Object.entries(data).map(([k, v]) => [k.toLowerCase(), v]),
+    );
+    const pfx = fields.certificatepfxbase64 ?? fields.pfxbase64;
+    const password = fields.certificatepassword ?? fields.password ?? "";
+    if (
+      typeof pfx !== "string" ||
+      pfx.length < 4 ||
+      pfx.length > 131072 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(pfx) ||
+      pfx.length % 4 !== 0 ||
+      typeof password !== "string" ||
+      password.length > 4096
+    )
+      throw new CentsysError("protocol");
+    return { pfx: Buffer.from(pfx, "base64"), password };
   }
 
   async discover(signal?: AbortSignal): Promise<Device[]> {

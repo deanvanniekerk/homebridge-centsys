@@ -1,0 +1,142 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { GateCoordinator } from "../dist/coordinator.js";
+import { CentsysError } from "../dist/errors.js";
+const gate = {
+  name: "Gate",
+  serialNumber: "00112233445566778899AABB",
+  enableControl: true,
+  macAddress: "AA:BB:CC:DD:EE:FF",
+};
+const row = (state) => ({
+  serialNumber: gate.serialNumber,
+  state,
+  stateCode: 2,
+  powerSupplyCode: null,
+  closingBeamCode: null,
+  openingBeamCode: null,
+  theftAlarmCode: null,
+});
+function deferred() {
+  let resolve;
+  const promise = new Promise((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+test("unavailable on startup, missing overview, network failure and stale data; never manufactures a closed state", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: 100000 });
+  let response = [row("closed")],
+    failure = false;
+  const gateway = {
+    read: async () => {
+      if (failure) throw new CentsysError("authentication");
+      return response;
+    },
+    activate: async () => {
+      throw Error("Unexpected command");
+    },
+  };
+  const c = new GateCoordinator([gate], gateway, 15);
+  t.after(() => c.close());
+  assert.equal(c.snapshot(gate.serialNumber).state, "unknown");
+  await c.refresh();
+  assert.equal(c.snapshot(gate.serialNumber).state, "closed");
+  t.mock.timers.tick(45001);
+  assert.equal(c.snapshot(gate.serialNumber).state, "unknown");
+  response = [];
+  await c.refresh();
+  assert.equal(c.snapshot(gate.serialNumber).state, "unknown");
+  failure = true;
+  await c.refresh();
+  assert.equal(c.snapshot(gate.serialNumber).error, "authentication");
+});
+test("one account command at a time; ambiguous failure is not retried and pre-command HTTP cannot overwrite MQTT", async (t) => {
+  const pending = deferred(),
+    activation = deferred();
+  let count = 0;
+  const gateway = {
+    read: () => pending.promise,
+    activate: async (_g, _t, _s, onState) => {
+      count++;
+      onState({
+        state: "opening",
+        obstruction: null,
+        batteryVoltage: 13.4,
+        inhibited: false,
+      });
+      await activation.promise;
+      throw new CentsysError("command-uncertain");
+    },
+  };
+  const c = new GateCoordinator([gate], gateway, 15);
+  t.after(() => c.close());
+  const reading = c.refresh();
+  const command = c.setTarget(gate.serialNumber, "open");
+  assert.equal(count, 1, "a slow HTTP read does not delay activation");
+  await assert.rejects(
+    c.setTarget(gate.serialNumber, "closed"),
+    (e) => e.code === "busy",
+  );
+  pending.resolve([row("closed")]);
+  await reading;
+  await new Promise((r) => setImmediate(r));
+  assert.equal(c.snapshot(gate.serialNumber).state, "opening");
+  assert.equal(count, 1);
+  activation.resolve();
+  await assert.rejects(command, (e) => e.code === "command-uncertain");
+  assert.equal(count, 1);
+  assert.equal(c.snapshot(gate.serialNumber).state, "unknown");
+});
+test("HTTP success or failure started before a completed command cannot replace its live state", async (t) => {
+  for (const fail of [false, true]) {
+    const pending = deferred();
+    const c = new GateCoordinator(
+      [gate],
+      {
+        read: async () => {
+          await pending.promise;
+          if (fail) throw new CentsysError("transport");
+          return [row("closed")];
+        },
+        activate: async (_g, _t, _s, onState) => {
+          const live = {
+            state: "opening",
+            obstruction: false,
+            batteryVoltage: 13.4,
+            inhibited: false,
+          };
+          onState(live);
+          return { live, activated: true };
+        },
+      },
+      15,
+    );
+    t.after(() => c.close());
+    const reading = c.refresh();
+    await c.setTarget(gate.serialNumber, "open");
+    pending.resolve();
+    await reading;
+    assert.equal(c.snapshot(gate.serialNumber).state, "opening");
+    assert.equal(c.snapshot(gate.serialNumber).target, "open");
+  }
+});
+test("control stays disabled by default and shutdown prevents further activation", async () => {
+  let commands = 0;
+  const c = new GateCoordinator(
+    [{ ...gate, enableControl: false }],
+    {
+      read: async () => [],
+      activate: async () => {
+        commands++;
+      },
+    },
+    15,
+  );
+  await assert.rejects(
+    c.setTarget(gate.serialNumber, "open"),
+    (e) => e.code === "control-disabled",
+  );
+  c.close();
+  assert.equal(commands, 0);
+});

@@ -1,6 +1,6 @@
 # Third-party notices
 
-The HTTPS authentication/discovery/overview contract and status mappings were adapted from [Lex-campbell/centsys_remote](https://github.com/Lex-campbell/centsys_remote) at commit `4d6daab50e4305fe2d3ea2c0d2df6e65737e1dba`. The implementation here is TypeScript and uses stricter decoding and bounded transport. The optional bootstrap preparation extracts a credential from that same pinned MIT-licensed source into ignored local storage.
+The HTTPS authentication/discovery/overview/certificate contract, MQTT packet encoding, telemetry layout, status mappings and public broker CA certificate were adapted from [Lex-campbell/centsys_remote](https://github.com/Lex-campbell/centsys_remote) at commit `4d6daab50e4305fe2d3ea2c0d2df6e65737e1dba`. The implementation here is TypeScript and uses stricter decoding and bounded transport. Bootstrap preparation for the CLI and Homebridge settings UI extracts a credential from that same pinned MIT-licensed source into ignored local storage.
 
 The upstream copyright and permission notice follows:
 

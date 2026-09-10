@@ -348,3 +348,29 @@ test("diagnostics keep unknown/offline context and discard all private metadata"
   assert.equal(missing.devices[0].cloudReportedState, "unknown");
   assert.equal(missing.devices[0].overviewReceived, false);
 });
+
+test("MQTT certificate retrieval uses saved bearer and rejects malformed secrets without exposing them", async (t) => {
+  let result = {
+    CertificatePfxBase64: Buffer.from("synthetic-pfx").toString("base64"),
+    CertificatePassword: "synthetic-passphrase",
+  };
+  const { client, calls } = await service(
+    t,
+    (_call, response) => json(response, result),
+    { sessionToken },
+  );
+  const certificate = await client.certificate();
+  assert.equal(certificate.pfx.toString(), "synthetic-pfx");
+  assert.equal(certificate.password, "synthetic-passphrase");
+  assert.equal(calls[0].path, "/GetCertificate");
+  assert.deepEqual(calls[0].body, {});
+  assert.equal(calls[0].headers.authorization, `Bearer ${sessionToken}`);
+  result = {
+    certificatePfxBase64: "malformed-private-certificate",
+    certificatePassword: { secret: "private" },
+  };
+  await assert.rejects(
+    client.certificate(),
+    (e) => e.code === "protocol" && !e.message.includes("private"),
+  );
+});

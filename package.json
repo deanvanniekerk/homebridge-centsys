@@ -1,11 +1,12 @@
 {
   "name": "homebridge-centsys",
-  "version": "0.0.0",
+  "version": "0.1.0-alpha.0",
   "private": true,
-  "description": "CENTSYS Homebridge plugin development: read-only cloud diagnostics",
+  "description": "CENTSYS SMART+ gate monitoring and experimental control for Homebridge",
   "type": "module",
   "engines": {
-    "node": ">=22.0.0"
+    "node": "^22 || ^24",
+    "homebridge": "^2.4.0"
   },
   "license": "MIT",
   "repository": {
@@ -15,15 +16,37 @@
   "scripts": {
     "build": "tsc",
     "test": "npm run build && node --test test/*.test.mjs",
-    "format": "prettier --write src test package.json tsconfig.json .github/workflows/check.yml",
-    "format:check": "prettier --check src test package.json tsconfig.json .github/workflows/check.yml",
+    "format": "prettier --write src test package.json tsconfig.json .github/workflows/check.yml homebridge-ui config.schema.json",
+    "format:check": "prettier --check src test package.json tsconfig.json .github/workflows/check.yml homebridge-ui config.schema.json",
     "check": "npm run format:check && npm test",
     "prepare:auth": "npm run build && node dist/prepare-auth.js",
-    "diagnose": "npm run build && node dist/cli.js"
+    "diagnose": "npm run build && node dist/cli.js",
+    "prepack": "npm run build"
   },
   "devDependencies": {
     "@types/node": "22.20.1",
+    "homebridge": "2.4.0",
     "prettier": "3.9.6",
     "typescript": "6.0.3"
-  }
+  },
+  "dependencies": {
+    "@homebridge/plugin-ui-utils": "2.2.6",
+    "mqtt": "5.15.2"
+  },
+  "main": "dist/index.js",
+  "exports": "./dist/index.js",
+  "keywords": [
+    "homebridge-plugin"
+  ],
+  "files": [
+    "dist/*.js",
+    "homebridge-ui/",
+    "resources/centsys-ca.crt",
+    "config.schema.json",
+    "README.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md",
+    "docs/INSTALLATION.md",
+    "docs/VALIDATION.md"
+  ]
 }

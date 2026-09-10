@@ -1,10 +1,13 @@
 import { join } from "node:path";
+import { readFileSync } from "node:fs";
 import { CentsysError } from "./errors.js";
 import { record } from "./protocol.js";
 
 export const PLUGIN_NAME = "homebridge-centsys";
 export const PLATFORM_NAME = "Centsys";
-export const VERSION = "0.1.0-alpha.4";
+export const VERSION: string = JSON.parse(
+  readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+).version;
 export const storageDirectory = (root: string) => join(root, "centsys", "auth");
 
 export interface GateConfig {

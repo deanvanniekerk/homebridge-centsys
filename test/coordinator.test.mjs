@@ -182,3 +182,91 @@ test("queued jobs have a 30-second deadline, cancel on shutdown, and never retry
     t.mock.restoreAll();
   }
 });
+
+test("poll failures back off, recovery resumes normal cadence, and polling never actuates", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  let unavailable = true;
+  let reads = 0;
+  const c = new GateCoordinator(
+    [gate],
+    {
+      read: async () => {
+        reads++;
+        if (unavailable) throw new CentsysError("transport");
+        return [row("closed")];
+      },
+      activate: async () => assert.fail("Polling must not activate"),
+    },
+    15,
+  );
+  t.after(() => c.close());
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  c.start();
+  await flush();
+  assert.equal(reads, 1);
+  assert.equal(c.snapshot(gate.serialNumber).error, "transport");
+  for (const delay of [30000, 60000, 120000, 240000, 300000, 300000]) {
+    const before = reads;
+    t.mock.timers.tick(delay - 1);
+    await flush();
+    assert.equal(reads, before);
+    t.mock.timers.tick(1);
+    await flush();
+    assert.equal(reads, before + 1);
+  }
+  unavailable = false;
+  t.mock.timers.tick(300000);
+  await flush();
+  assert.equal(c.snapshot(gate.serialNumber).state, "closed");
+  assert.equal(c.snapshot(gate.serialNumber).error, undefined);
+  const recovered = reads;
+  t.mock.timers.tick(15000);
+  await flush();
+  assert.equal(reads, recovered + 1);
+  c.close();
+  t.mock.timers.tick(300000);
+  await flush();
+  assert.equal(reads, recovered + 1);
+});
+
+test("target reconciles at endpoint or expires, and recovery never replays an uncertain command", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: 100000 });
+  for (const outcome of ["endpoint", "stalled", "uncertain"]) {
+    let observed = "closed";
+    let commands = 0;
+    const c = new GateCoordinator(
+      [gate],
+      {
+        read: async () => [row(observed)],
+        activate: async (_g, _t, _s, onState) => {
+          commands++;
+          const live = {
+            state: "closed",
+            obstruction: null,
+            inhibited: false,
+            batteryVoltage: 13.4,
+          };
+          onState(live);
+          if (outcome === "uncertain")
+            throw new CentsysError("command-uncertain");
+          return { live, activated: true };
+        },
+      },
+      15,
+    );
+    await c.refresh();
+    const command = c.setTarget(gate.serialNumber, "open");
+    if (outcome === "uncertain")
+      await assert.rejects(command, (e) => e.code === "command-uncertain");
+    else await command;
+    if (outcome === "endpoint") observed = "open";
+    if (outcome === "stalled") t.mock.timers.tick(60001);
+    await c.refresh();
+    const state = c.snapshot(gate.serialNumber);
+    assert.equal(state.state, observed);
+    assert.equal(state.target, undefined);
+    assert.equal(state.error, undefined);
+    assert.equal(commands, 1);
+    c.close();
+  }
+});

@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { EventEmitter, once } from "node:events";
 import { fork } from "node:child_process";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import hap from "@homebridge/hap-nodejs";
@@ -51,6 +51,15 @@ test("real HAP garage service remains readable with cloud state and no obstructi
   );
   api.emit("didFinishLaunching");
   await new Promise((r) => setImmediate(r));
+  const packageInfo = JSON.parse(
+    await readFile(new URL("../package.json", import.meta.url), "utf8"),
+  );
+  assert.equal(
+    accessory
+      .getService(hap.Service.AccessoryInformation)
+      .getCharacteristic(hap.Characteristic.FirmwareRevision).value,
+    packageInfo.version,
+  );
   assert.equal(
     await service
       .getCharacteristic(hap.Characteristic.CurrentDoorState)
@@ -232,4 +241,70 @@ test("custom UI server runs with Homebridge IPC and returns fixed errors without
   assert.equal(result.data.error.code, "configuration");
   assert.ok(!JSON.stringify(result).includes("private-invalid-input"));
   assert.ok(!logs.includes("private-invalid-input"));
+});
+
+test("HomeKit reports failed reads unavailable and recovers all required characteristics without actuation", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  let failed = false;
+  let observed = "closed";
+  const api = Object.assign(new EventEmitter(), {
+    hap,
+    platformAccessory: PlatformAccessory,
+    user: { storagePath: () => "/unused" },
+    registerPlatformAccessories: (_p, _n, accessories) => {
+      api.registered = accessories;
+    },
+    updatePlatformAccessories: () => {},
+    unregisterPlatformAccessories: () => {},
+  });
+  new CentsysPlatform(
+    { info: () => {}, warn: () => {}, error: (m) => assert.fail(m) },
+    config,
+    api,
+    {
+      gateway: {
+        read: async () => {
+          if (failed) throw new CentsysError("transport");
+          return [{ serialNumber, state: observed }];
+        },
+        activate: async () => assert.fail("Recovery must not actuate"),
+      },
+    },
+  );
+  t.after(() => api.emit("shutdown"));
+  api.emit("didFinishLaunching");
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  await flush();
+  const service = api.registered[0].getService(hap.Service.GarageDoorOpener);
+  const types = [
+    hap.Characteristic.CurrentDoorState,
+    hap.Characteristic.TargetDoorState,
+    hap.Characteristic.ObstructionDetected,
+  ];
+  const values = () =>
+    Promise.all(
+      types.map((type) => service.getCharacteristic(type).handleGetRequest()),
+    );
+  assert.deepEqual(await values(), [1, 1, false]);
+  failed = true;
+  t.mock.timers.tick(15000);
+  await flush();
+  for (const type of types) {
+    const characteristic = service.getCharacteristic(type);
+    assert.equal(
+      characteristic.statusCode,
+      hap.HAPStatus.SERVICE_COMMUNICATION_FAILURE,
+    );
+    await assert.rejects(characteristic.handleGetRequest());
+  }
+  failed = false;
+  observed = "open";
+  t.mock.timers.tick(30000);
+  await flush();
+  assert.deepEqual(await values(), [0, 0, false]);
+  for (const type of types)
+    assert.equal(
+      service.getCharacteristic(type).statusCode,
+      hap.HAPStatus.SUCCESS,
+    );
 });

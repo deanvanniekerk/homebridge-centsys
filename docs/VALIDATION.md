@@ -161,6 +161,16 @@ After renewed owner readiness, one open request was sent through Apple Home. The
 
 The owner confirmed that the gate physically opened fully and authorized one close request with the driveway clear. That HomeKit close returned `attempt=1, code=1, configVersion=0` at 11:03:33 UTC. Apple Home was observed showing Closing and then Closed. Neither request needed negotiation or replay. The owner subsequently confirmed that the gate physically closed fully. This establishes one complete, owner-observed HomeKit open-and-close cycle on the installed alpha.5 with the corrected protocol address.
 
+### Non-actuating reliability checks — 10 September 2026
+
+All 54 automated tests pass. New scheduler checks verify failed-read backoff through 30, 60, 120, 240 and capped 300-second delays, normal polling after recovery, and no polling after shutdown. Target checks cover clearing the requested target at the observed endpoint, expiry when the target is not reached, and recovery after an uncertain outcome without command replay. Real Homebridge HAP objects report communication failure on CurrentDoorState, TargetDoorState and ObstructionDetected after a simulated transport failure; all three recover when fresh readings return. These are controlled tests, not a real network outage or long-running reliability measurement.
+
+A separate diagnostic process on iHost used the installed alpha.5 CloudGateway and coordinator with the saved login. Two real overview requests surrounded one locally injected fetch failure: Closed → Unknown/transport → Closed. An independent operation allowlist permitted only GetOperatorOverview and the diagnostic gateway blocked activation. It made zero activation calls. The live child bridge, its configuration and the gate network were not altered, so this does not establish Apple Home's appearance during a real gate outage.
+
+The validation also exposed a hardcoded accessory FirmwareRevision left at alpha.4. A regression reproduced the mismatch; source now reads package metadata so the displayed version follows the installed package. That metadata-only correction is saved for the next package; iHost remains on the previously validated alpha.5 archive.
+
+The real gate-offline case remains open: the client timestamps receipt of the HTTPS response, not the physical observation. If the vendor keeps returning a cached endpoint state while the controller is disconnected, local stale-read expiry cannot detect it. A bounded owner-assisted gate Wi-Fi outage is the next check. No further movement is needed for that observation.
+
 ## Remaining before routine Homebridge control
 
-Validate offline/stale behavior and target reconciliation on the installation, and assess reliability beyond the first successful cycle. Apple Home has now displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.
+Validate a real controller Wi-Fi outage and recovery, then assess reliability beyond the first successful cycle. Transport-failure recovery, local stale reads and target reconciliation have controlled test coverage. Apple Home has displayed both movement directions and endpoints, and the owner confirmed full physical opening and closure. Investigate empty account discovery separately; the working manual identity path avoids blocking setup. No npm release has been published.

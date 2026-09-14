@@ -33,6 +33,7 @@ function broker({
   activationReplies,
   identityStatus = 1,
   identityHeader = 0,
+  identityExtra = [0, 0, 0],
   telemetryPayload,
   beforeEnd,
 } = {}) {
@@ -68,7 +69,16 @@ function broker({
       else if (data[2] === 1) {
         const reply = header(
           2,
-          Buffer.from([0x92 ^ identityStatus, 0x23, 0xf3, 0x67, 0, 0, 0, 0]),
+          Buffer.from([
+            0x92 ^ identityStatus,
+            0x23 ^ identityExtra[0],
+            0xf3 ^ identityExtra[1],
+            0x67 ^ identityExtra[2],
+            0,
+            0,
+            0,
+            0,
+          ]),
         );
         reply[3] = identityHeader;
         incoming("userRemoteTriggerResponse", reply);
@@ -427,4 +437,42 @@ test("MQTT diagnostic context survives session teardown and uncertain activation
       scenario.target ? 1 : 0,
     );
   }
+});
+
+test("status-1 identity replies tolerate unspecified bytes and still require live telemetry", async () => {
+  for (const identityHeader of [0, 0x87]) {
+    for (const identityExtra of [
+      [1, 0, 0],
+      [0, 128, 0],
+      [0, 0, 255],
+      [255, 255, 255],
+    ]) {
+      const b = broker({ identityHeader, identityExtra });
+      const result = await gateSession({ ...options, connect: b.connect });
+      assert.equal(result.live.state, "closed");
+      assert.equal(result.activated, false);
+      assert.equal(b.sent.filter((p) => [3, 5].includes(p.data[2])).length, 0);
+    }
+  }
+  const invalid = broker({
+    identityExtra: [1, 128, 255],
+    telemetryPayload: Buffer.alloc(28),
+  });
+  await assert.rejects(
+    gateSession({ ...options, target: "open", connect: invalid.connect }),
+    (e) => e.code === "protocol" && e.diagnostic.stage === "telemetry",
+  );
+  assert.equal(
+    invalid.sent.filter((p) => [3, 5].includes(p.data[2])).length,
+    0,
+  );
+  const rejected = broker({ identityStatus: 2, identityExtra: [1, 128, 255] });
+  await assert.rejects(
+    gateSession({ ...options, target: "open", connect: rejected.connect }),
+    (e) => e.code === "gate-authentication",
+  );
+  assert.equal(
+    rejected.sent.filter((p) => [3, 5].includes(p.data[2])).length,
+    0,
+  );
 });

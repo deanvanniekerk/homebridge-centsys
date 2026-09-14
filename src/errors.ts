@@ -76,7 +76,6 @@ const diagnosticLabels = {
     "subscription-rejected",
     "packet-length",
     "response-envelope",
-    "identity-padding",
     "telemetry-padding",
     "missing-telemetry",
   ],

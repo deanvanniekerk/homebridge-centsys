@@ -100,11 +100,9 @@ export function challengeFrom(data: Buffer, mac: string): Buffer {
     });
   const status = xor(data.subarray(4, 8), mac);
   if (status[0] !== 1) throw new CentsysError("gate-authentication");
-  if (status.subarray(1).some((v) => v !== 0))
-    throw new CentsysError("protocol", {
-      reason: "identity-padding",
-      bytes: data.length,
-    });
+  // Bytes 5–7 are unspecified by the pinned reference, not validated padding.
+  // Live status-1 replies can contain nonzero values here. Preserve the known
+  // envelope and success-byte checks; the session still requires live telemetry.
   return Buffer.from(data.subarray(-4));
 }
 export interface ActivationResponse {

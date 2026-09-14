@@ -1,6 +1,6 @@
 {
   "name": "homebridge-centsys",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "CENTSYS SMART+ gate monitoring and control for Homebridge",
   "type": "module",
   "engines": {
@@ -38,7 +38,8 @@
   "main": "dist/index.js",
   "exports": "./dist/index.js",
   "keywords": [
-    "homebridge-plugin"
+    "homebridge-plugin",
+    "supports-hap"
   ],
   "files": [
     "dist/*.js",
@@ -46,11 +47,13 @@
     "resources/centsys-ca.crt",
     "config.schema.json",
     "README.md",
+    "CHANGELOG.md",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md",
     "docs/INSTALLATION.md",
     "docs/VALIDATION.md",
     "scripts/check-release.mjs",
+    "scripts/release-notes.mjs",
     "docs/RELEASING.md"
   ],
   "author": "Dean van Niekerk",

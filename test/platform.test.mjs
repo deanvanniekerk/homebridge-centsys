@@ -12,6 +12,42 @@ import { parseConfig } from "../dist/settings.js";
 import { CentsysError } from "../dist/errors.js";
 const serialNumber = "00112233445566778899AABB";
 const config = { platform: "Centsys", gates: [{ name: "Gate", serialNumber }] };
+test("an unconfigured platform removes stale accessories without starting monitoring", async (t) => {
+  const removed = [];
+  const messages = [];
+  const api = Object.assign(new EventEmitter(), {
+    hap,
+    platformAccessory: PlatformAccessory,
+    user: { storagePath: () => "/unused" },
+    registerPlatformAccessories: () => assert.fail("registered an accessory"),
+    updatePlatformAccessories: () => assert.fail("updated an accessory"),
+    unregisterPlatformAccessories: (_p, _n, accessories) =>
+      removed.push(...accessories),
+  });
+  const gateway = {
+    read: () => assert.fail("started monitoring without a configured gate"),
+    activate: () => assert.fail("activated without a configured gate"),
+  };
+  const platform = new CentsysPlatform(
+    {
+      info: (message) => messages.push(message),
+      warn: (message) => assert.fail(message),
+      error: (message) => assert.fail(message),
+    },
+    { platform: "Centsys" },
+    api,
+    { gateway },
+  );
+  t.after(() => api.emit("shutdown"));
+  const stale = new PlatformAccessory("Old gate", hap.uuid.generate("old"));
+  platform.configureAccessory(stale);
+  api.emit("didFinishLaunching");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(removed, [stale]);
+  assert.deepEqual(messages, [
+    "CENTSYS is not configured. Open the plugin settings to add a gate.",
+  ]);
+});
 test("real HAP garage service remains readable with cloud state and no obstruction report, and rejects disabled writes", async (t) => {
   let commands = 0;
   const api = Object.assign(new EventEmitter(), {

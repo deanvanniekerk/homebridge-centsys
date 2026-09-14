@@ -75,6 +75,17 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
   }
   #launch() {
     if (!this.#config || !this.#coordinator) return;
+    if (this.#config.gates.length === 0) {
+      for (const accessory of this.#cached.values())
+        this.api.unregisterPlatformAccessories(PLUGIN_NAME, PLATFORM_NAME, [
+          accessory,
+        ]);
+      this.#cached.clear();
+      this.log.info(
+        "CENTSYS is not configured. Open the plugin settings to add a gate.",
+      );
+      return;
+    }
     const {
       Service: S,
       Characteristic: C,

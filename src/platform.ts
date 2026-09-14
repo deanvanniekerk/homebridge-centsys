@@ -16,13 +16,16 @@ import type { CentsysConfig } from "./settings.js";
 import { CloudGateway } from "./gateway.js";
 import { GateCoordinator } from "./coordinator.js";
 import type { Gateway } from "./coordinator.js";
-import { CentsysError } from "./errors.js";
+import { CentsysError, formatError } from "./errors.js";
 
 export class CentsysPlatform implements DynamicPlatformPlugin {
   readonly #cached = new Map<string, PlatformAccessory>();
   readonly #config: CentsysConfig | undefined;
   readonly #coordinator: GateCoordinator | undefined;
-  #lastError: string | undefined;
+  readonly #lastErrors = new Map<
+    string,
+    { signature: string; since: number }
+  >();
   constructor(
     readonly log: Logger,
     readonly config: PlatformConfig,
@@ -80,7 +83,7 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
     } = this.api.hap;
     const selected = new Set<string>();
     const updates: (() => void)[] = [];
-    for (const gate of this.#config.gates) {
+    for (const [index, gate] of this.#config.gates.entries()) {
       const uuid = this.api.hap.uuid.generate(
         `centsys:gate:${gate.serialNumber}`,
       );
@@ -143,10 +146,16 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
           if (value !== 0 && value !== 1)
             throw new HapStatusError(INVALID_VALUE_IN_REQUEST);
           const report = (error: unknown) => {
-            this.log.warn(
+            const message =
               error instanceof CentsysError
-                ? error.message
-                : "Gate request failed. Check the gate before trying again.",
+                ? this.#config!.diagnosticLogging
+                  ? formatError(error)
+                  : error.message
+                : "Gate request failed. Check the gate before trying again.";
+            this.log.warn(
+              this.#config!.diagnosticLogging
+                ? `Gate ${index + 1} command failed: ${message}`
+                : message,
             );
           };
           try {
@@ -190,17 +199,42 @@ export class CentsysPlatform implements DynamicPlatformPlugin {
       }
     this.#coordinator.on("update", () => {
       updates.forEach((update) => update());
-      const error = this.#config!.gates.map(
-        (g) => this.#coordinator!.snapshot(g.serialNumber).error,
-      ).find(Boolean);
-      if (error && error !== this.#lastError)
-        this.log.warn(new CentsysError(error).message);
-      this.#lastError = error;
+      for (const [index, gate] of this.#config!.gates.entries()) {
+        const state = this.#coordinator!.snapshot(gate.serialNumber);
+        const previous = this.#lastErrors.get(gate.serialNumber);
+        if (state.error) {
+          const error = new CentsysError(state.error, state.diagnostic);
+          // Numeric lengths can vary on repeated malformed replies. Deduplicate
+          // by failure category so that those changes cannot flood the log.
+          const { operation, stage, reason, field } = error.diagnostic;
+          const signature = JSON.stringify(
+            this.#config!.diagnosticLogging
+              ? [error.code, operation, stage, reason, field]
+              : [error.code],
+          );
+          if (signature !== previous?.signature)
+            this.log.warn(
+              this.#config!.diagnosticLogging
+                ? `Gate ${index + 1} status unavailable: ${formatError(error)}`
+                : error.message,
+            );
+          this.#lastErrors.set(gate.serialNumber, {
+            signature,
+            since: previous?.since ?? Date.now(),
+          });
+        } else if (previous) {
+          if (this.#config!.diagnosticLogging)
+            this.log.info(
+              `Gate ${index + 1} status recovered after ${Math.max(0, Math.round((Date.now() - previous.since) / 1000))}s.`,
+            );
+          this.#lastErrors.delete(gate.serialNumber);
+        }
+      }
     });
     updates.forEach((update) => update());
     this.#coordinator.start();
     this.log.info(
-      "CENTSYS monitoring started. Configure sign-in and gates in the plugin settings.",
+      `CENTSYS ${VERSION} monitoring started${this.#config.diagnosticLogging ? " (diagnostic logging enabled)" : ""}. Configure sign-in and gates in the plugin settings.`,
     );
   }
 }

@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       approved_version:
-        description: "Exact version approved for publication (for example 0.1.0-alpha.8)"
+        description: "Exact version approved for publication (for example 1.0.0)"
         required: true
         type: string
 

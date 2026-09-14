@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 import vm from "node:vm";
 
 // Execute the shipped wizard event handlers against a small DOM/Homebridge boundary.
-async function wizard(rows, verify, initialGates) {
+async function wizard(rows, verify, initialGates, initialSettings = {}) {
   const elements = new Map();
   const element = (id) => {
     if (!elements.has(id))
@@ -45,7 +45,13 @@ async function wizard(rows, verify, initialGates) {
     querySelectorAll: () => [],
   };
   let config = [
-    { platform: "Centsys", name: "CENTSYS", pollInterval: 20, gates: saved },
+    {
+      platform: "Centsys",
+      name: "CENTSYS",
+      pollInterval: 20,
+      gates: saved,
+      ...initialSettings,
+    },
   ];
   let writes = 0;
   const homebridge = {
@@ -260,4 +266,30 @@ test("changing a verified Wi-Fi MAC prevents saving until verified again", async
   await w.event("gate-form", "submit");
   assert.equal(w.writes, 0);
   assert.equal(w.element("mac").value, "");
+});
+
+test("diagnostic logging saves independently of gate setup and survives reopening and gate saves", async () => {
+  const w = await wizard([]);
+  assert.equal(w.element("diagnostic-logging").checked, false);
+  const before = JSON.stringify(w.config[0].gates);
+  w.element("diagnostic-logging").checked = true;
+  await w.event("save-diagnostics", "click");
+  assert.equal(w.config[0].diagnosticLogging, true);
+  assert.equal(w.config[0].pollInterval, 20);
+  assert.equal(JSON.stringify(w.config[0].gates), before);
+  assert.equal(w.writes, 1);
+  const reopened = await wizard([], undefined, w.config[0].gates, {
+    diagnosticLogging: true,
+  });
+  assert.equal(reopened.element("diagnostic-logging").checked, true);
+  await reopened.event("gate-form", "submit");
+  assert.equal(reopened.config[0].diagnosticLogging, true);
+  reopened.element("diagnostic-logging").checked = false;
+  await reopened.event("save-diagnostics", "click");
+  assert.equal(reopened.config[0].diagnosticLogging, false);
+  const empty = await wizard([], undefined, []);
+  empty.element("diagnostic-logging").checked = true;
+  await empty.event("save-diagnostics", "click");
+  assert.equal(empty.config[0].diagnosticLogging, true);
+  assert.equal(empty.config[0].gates.length, 0);
 });

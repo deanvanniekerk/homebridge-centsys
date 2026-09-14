@@ -91,6 +91,7 @@ export async function gateSession(options: Options): Promise<MqttResult> {
       "connect";
     const finish = (error?: CentsysError) => {
       if (done) return;
+      error = error?.withContext({ operation: "mqtt", stage });
       done = true;
       clearTimeout(timer);
       options.signal?.removeEventListener("abort", aborted);
@@ -98,11 +99,18 @@ export async function gateSession(options: Options): Promise<MqttResult> {
         if (error)
           reject(
             awaitingOutcome && error.code !== "command-rejected"
-              ? new CentsysError("command-uncertain")
+              ? new CentsysError("command-uncertain", error.diagnostic)
               : error,
           );
         else if (live) resolve({ live, activated });
-        else reject(new CentsysError("protocol"));
+        else
+          reject(
+            new CentsysError("protocol", {
+              operation: "mqtt",
+              stage,
+              reason: "missing-telemetry",
+            }),
+          );
       };
       if (client?.connected && operatorConnected) {
         // Do not hand the shared account client ID to another session before teardown.
@@ -238,7 +246,12 @@ export async function gateSession(options: Options): Promise<MqttResult> {
           { qos: 0 },
           (error, granted) => {
             if (error || !granted || granted.some((g) => g.qos > 2)) {
-              finish(new CentsysError("protocol"));
+              finish(
+                new CentsysError("protocol", {
+                  stage: "subscribe",
+                  reason: "subscription-rejected",
+                }),
+              );
               return;
             }
             publish(
@@ -257,7 +270,11 @@ export async function gateSession(options: Options): Promise<MqttResult> {
             name === topic("connectionRequestResponse") &&
             stage === "connect"
           ) {
-            if (payload.length !== 1) throw new CentsysError("protocol");
+            if (payload.length !== 1)
+              throw new CentsysError("protocol", {
+                reason: "packet-length",
+                bytes: payload.length,
+              });
             operatorConnected = true;
             stage = "identity";
             publish("userRemoteTrigger", identity, "userRemoteTriggerResponse");

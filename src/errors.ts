@@ -42,10 +42,108 @@ const messages: Record<ErrorCode, string> = {
   "local-storage": "Could not read or write a private local credential file.",
 };
 
-/** Never includes request URLs, account identifiers, response bodies or nested causes. */
+const diagnosticLabels = {
+  operation: [
+    "SendOtp",
+    "ValidateOtp",
+    "GetDevicesByRemoteUserNumber",
+    "GetOperatorOverview",
+    "GetCertificate",
+    "mqtt",
+  ],
+  stage: [
+    "connect",
+    "subscribe",
+    "identity",
+    "telemetry",
+    "time",
+    "activating",
+    "ack",
+  ],
+  reason: [
+    "missing-body",
+    "body-too-large",
+    "invalid-json",
+    "expected-record",
+    "expected-list",
+    "too-many-rows",
+    "invalid-serial",
+    "expected-integer",
+    "expected-boolean",
+    "duplicate-identity",
+    "unexpected-identity",
+    "invalid-certificate",
+    "subscription-rejected",
+    "packet-length",
+    "response-envelope",
+    "identity-padding",
+    "telemetry-padding",
+    "missing-telemetry",
+  ],
+  field: [
+    "serialNumber",
+    "operatorSerialNumber",
+    "productCode",
+    "productType",
+    "isWifiDevice",
+    "isOnline",
+    "operatorStatus",
+    "powerSupplyStatus",
+    "closingBeamStatus",
+    "openingBeamStatus",
+    "theftAlarmState",
+  ],
+} as const;
+
+export type ErrorDiagnostic = {
+  [K in keyof typeof diagnosticLabels]?: (typeof diagnosticLabels)[K][number];
+} & { bytes?: number; status?: number };
+
+/** Runtime allowlist: even JavaScript callers cannot inject server text into logs. */
+function safeDiagnostic(input: ErrorDiagnostic): Readonly<ErrorDiagnostic> {
+  const result: Record<string, string | number> = {};
+  for (const key of Object.keys(
+    diagnosticLabels,
+  ) as (keyof typeof diagnosticLabels)[]) {
+    const value = input[key];
+    if (
+      typeof value === "string" &&
+      (diagnosticLabels[key] as readonly string[]).includes(value)
+    )
+      result[key] = value;
+  }
+  for (const key of ["bytes", "status"] as const) {
+    const value = input[key];
+    if (
+      typeof value === "number" &&
+      Number.isSafeInteger(value) &&
+      value >= 0 &&
+      value <= (key === "status" ? 599 : 268435455)
+    )
+      result[key] = value;
+  }
+  return Object.freeze(result);
+}
+
+/** Public messages stay fixed; opt-in diagnostic formatting adds only allowlisted metadata. */
 export class CentsysError extends Error {
-  constructor(readonly code: ErrorCode) {
+  readonly diagnostic: Readonly<ErrorDiagnostic>;
+  constructor(
+    readonly code: ErrorCode,
+    diagnostic: ErrorDiagnostic = {},
+  ) {
     super(messages[code]);
     this.name = "CentsysError";
+    this.diagnostic = safeDiagnostic(diagnostic);
   }
+  withContext(context: ErrorDiagnostic): CentsysError {
+    return new CentsysError(this.code, { ...context, ...this.diagnostic });
+  }
+}
+
+export function formatError(error: CentsysError): string {
+  const details = Object.entries(safeDiagnostic(error.diagnostic))
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ");
+  return `${messages[error.code]}${details ? ` [${details}]` : ""}`;
 }

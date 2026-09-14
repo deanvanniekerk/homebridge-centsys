@@ -1,6 +1,6 @@
 import { EventEmitter } from "node:events";
 import { CentsysError } from "./errors.js";
-import type { ErrorCode } from "./errors.js";
+import type { ErrorCode, ErrorDiagnostic } from "./errors.js";
 import type { GateState, Overview } from "./protocol.js";
 import { LIVE_REFRESH_MS, LIVE_EXPIRY_MS } from "./protocol.js";
 import type { GateConfig } from "./settings.js";
@@ -23,6 +23,7 @@ export interface Snapshot {
   obstructionAt: number;
   target?: Target;
   error?: ErrorCode;
+  diagnostic?: Readonly<ErrorDiagnostic>;
 }
 export class GateCoordinator extends EventEmitter {
   readonly #abort = new AbortController();
@@ -172,6 +173,9 @@ export class GateCoordinator extends EventEmitter {
           obstruction: null,
           obstructionAt: 0,
           error: code,
+          ...(error instanceof CentsysError
+            ? { diagnostic: error.diagnostic }
+            : {}),
         });
     }
     this.#updated();
@@ -227,13 +231,19 @@ export class GateCoordinator extends EventEmitter {
         deadline.aborted &&
         !(error instanceof CentsysError && error.code === "command-uncertain")
       )
-        error = new CentsysError("timeout");
+        error = new CentsysError(
+          "timeout",
+          error instanceof CentsysError ? error.diagnostic : {},
+        );
       this.#snapshots.set(serial, {
         state: "unknown",
         receivedAt: Date.now(),
         obstruction: null,
         obstructionAt: 0,
         error: error instanceof CentsysError ? error.code : "transport",
+        ...(error instanceof CentsysError
+          ? { diagnostic: error.diagnostic }
+          : {}),
       });
       throw error;
     } finally {

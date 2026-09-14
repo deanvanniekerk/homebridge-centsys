@@ -247,6 +247,8 @@ test("HomeKit reports failed reads unavailable and recovers all required charact
   t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
   let failed = false;
   let observed = "closed";
+  const warnings = [],
+    information = [];
   const api = Object.assign(new EventEmitter(), {
     hap,
     platformAccessory: PlatformAccessory,
@@ -258,13 +260,21 @@ test("HomeKit reports failed reads unavailable and recovers all required charact
     unregisterPlatformAccessories: () => {},
   });
   new CentsysPlatform(
-    { info: () => {}, warn: () => {}, error: (m) => assert.fail(m) },
+    {
+      info: (m) => information.push(m),
+      warn: (m) => warnings.push(m),
+      error: (m) => assert.fail(m),
+    },
     config,
     api,
     {
       gateway: {
         read: async () => {
-          if (failed) throw new CentsysError("transport");
+          if (failed)
+            throw new CentsysError("transport", {
+              operation: "mqtt",
+              stage: "connect",
+            });
           return [{ serialNumber, state: observed }];
         },
         activate: async () => assert.fail("Recovery must not actuate"),
@@ -302,6 +312,11 @@ test("HomeKit reports failed reads unavailable and recovers all required charact
   t.mock.timers.tick(30000);
   await flush();
   assert.deepEqual(await values(), [0, 0, false]);
+  assert.deepEqual(warnings, [new CentsysError("transport").message]);
+  assert.equal(
+    information.some((m) => m.includes("status recovered")),
+    false,
+  );
   for (const type of types)
     assert.equal(
       service.getCharacteristic(type).statusCode,
@@ -375,4 +390,82 @@ test("live-proof expiry pushes HomeKit unavailable despite continued cached HTTP
       .handleGetRequest(),
     1,
   );
+});
+
+test("monitoring logs distinguish protocol failures, suppress repeats and report recovery", async (t) => {
+  t.mock.timers.enable({ apis: ["Date", "setTimeout"], now: 100000 });
+  const { CentsysReadClient } = await import("../dist/client.js");
+  let payload = [
+    { operatorSerialNumber: serialNumber, operatorStatus: "private-value" },
+  ];
+  const client = new CentsysReadClient({
+    mobileNumber: "+27820000000",
+    region: "za",
+    sessionToken: "private-token",
+    fetch: async () => new Response(JSON.stringify(payload)),
+  });
+  const warnings = [],
+    information = [];
+  const api = Object.assign(new EventEmitter(), {
+    hap,
+    platformAccessory: PlatformAccessory,
+    user: { storagePath: () => "/unused" },
+    registerPlatformAccessories: () => {},
+    updatePlatformAccessories: () => {},
+    unregisterPlatformAccessories: () => {},
+  });
+  new CentsysPlatform(
+    {
+      info: (m) => information.push(m),
+      warn: (m) => warnings.push(m),
+      error: (m) => assert.fail(m),
+    },
+    { ...config, diagnosticLogging: true },
+    api,
+    {
+      gateway: {
+        read: () => client.overview([{ serialNumber }]),
+        activate: async () => assert.fail("Diagnostics must not actuate"),
+      },
+    },
+  );
+  t.after(() => api.emit("shutdown"));
+  const flush = () => new Promise((r) => setImmediate(r));
+  api.emit("didFinishLaunching");
+  await flush();
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /Gate 1 status unavailable:/);
+  assert.match(warnings[0], /operation=GetOperatorOverview/);
+  assert.match(warnings[0], /reason=expected-integer/);
+  assert.match(warnings[0], /field=operatorStatus/);
+  t.mock.timers.tick(30000);
+  await flush();
+  assert.equal(warnings.length, 1, "identical failures stay quiet");
+  payload = { response: "private-response" };
+  t.mock.timers.tick(60000);
+  await flush();
+  assert.equal(warnings.length, 2, "a different protocol failure is visible");
+  assert.match(warnings[1], /reason=expected-list/);
+  payload = [{ operatorSerialNumber: serialNumber, operatorStatus: 2 }];
+  t.mock.timers.tick(120000);
+  await flush();
+  assert.equal(
+    information.filter((m) => m.includes("status recovered")).length,
+    1,
+  );
+  assert.ok(information.includes("Gate 1 status recovered after 210s."));
+  t.mock.timers.tick(15000);
+  await flush();
+  assert.equal(
+    information.filter((m) => m.includes("status recovered")).length,
+    1,
+  );
+  for (const secret of [
+    serialNumber,
+    "+27820000000",
+    "private-value",
+    "private-token",
+    "private-response",
+  ])
+    assert.ok(![...warnings, ...information].join("\n").includes(secret));
 });

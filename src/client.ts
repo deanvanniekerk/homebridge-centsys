@@ -61,16 +61,17 @@ export class CentsysReadClient {
         : credential(options.sessionToken);
   }
 
-  async #request(
+  async #request<T = unknown>(
     operation: Operation,
     body: unknown,
     authenticated: boolean,
     signal?: AbortSignal,
-  ): Promise<unknown> {
+    decode: (value: unknown) => T = (value) => value as T,
+  ): Promise<T> {
     const bearer = authenticated
       ? this.#sessionToken
       : (this.#sessionToken ?? this.#bootstrapToken);
-    if (!bearer) throw new CentsysError("authentication");
+    if (!bearer) throw new CentsysError("authentication", { operation });
     const url = new URL(`/${operation}`, this.#origin);
     if (operation === "GetDevicesByRemoteUserNumber")
       url.searchParams.set("remoteUserNumber", this.#mobileNumber);
@@ -95,12 +96,14 @@ export class CentsysReadClient {
       if (response.status !== 200) {
         await response.body?.cancel();
         if (response.status === 401 || response.status === 403)
-          throw new CentsysError("authentication");
-        if (response.status === 429) throw new CentsysError("rate-limited");
-        throw new CentsysError("http");
+          throw new CentsysError("authentication", { status: response.status });
+        if (response.status === 429)
+          throw new CentsysError("rate-limited", { status: response.status });
+        throw new CentsysError("http", { status: response.status });
       }
       const reader = response.body?.getReader();
-      if (!reader) throw new CentsysError("protocol");
+      if (!reader)
+        throw new CentsysError("protocol", { reason: "missing-body" });
       const chunks: Uint8Array[] = [];
       let bytes = 0;
       try {
@@ -108,23 +111,29 @@ export class CentsysReadClient {
           const chunk = await reader.read();
           if (chunk.done) break;
           bytes += chunk.value.byteLength;
-          if (bytes > 1_048_576) throw new CentsysError("protocol");
+          if (bytes > 1_048_576)
+            throw new CentsysError("protocol", {
+              reason: "body-too-large",
+              bytes,
+            });
           chunks.push(chunk.value);
         }
       } finally {
         await reader.cancel().catch(() => {});
         reader.releaseLock();
       }
+      let value: unknown;
       try {
-        return JSON.parse(Buffer.concat(chunks).toString("utf8")) as unknown;
+        value = JSON.parse(Buffer.concat(chunks).toString("utf8"));
       } catch {
-        throw new CentsysError("protocol");
+        throw new CentsysError("protocol", { reason: "invalid-json", bytes });
       }
+      return decode(value);
     } catch (error) {
-      if (signal?.aborted) throw new CentsysError("cancelled");
-      if (deadline.aborted) throw new CentsysError("timeout");
-      if (error instanceof CentsysError) throw error;
-      throw new CentsysError("transport");
+      if (signal?.aborted) throw new CentsysError("cancelled", { operation });
+      if (deadline.aborted) throw new CentsysError("timeout", { operation });
+      if (error instanceof CentsysError) throw error.withContext({ operation });
+      throw new CentsysError("transport", { operation });
     }
   }
 
@@ -172,35 +181,34 @@ export class CentsysReadClient {
   async certificate(
     signal?: AbortSignal,
   ): Promise<{ pfx: Buffer; password: string }> {
-    const data = record(
-      await this.#request("GetCertificate", {}, true, signal),
-    );
-    const fields = Object.fromEntries(
-      Object.entries(data).map(([k, v]) => [k.toLowerCase(), v]),
-    );
-    const pfx = fields.certificatepfxbase64 ?? fields.pfxbase64;
-    const password = fields.certificatepassword ?? fields.password ?? "";
-    if (
-      typeof pfx !== "string" ||
-      pfx.length < 4 ||
-      pfx.length > 131072 ||
-      !/^[A-Za-z0-9+/]+={0,2}$/.test(pfx) ||
-      pfx.length % 4 !== 0 ||
-      typeof password !== "string" ||
-      password.length > 4096
-    )
-      throw new CentsysError("protocol");
-    return { pfx: Buffer.from(pfx, "base64"), password };
+    return this.#request("GetCertificate", {}, true, signal, (value) => {
+      const data = record(value);
+      const fields = Object.fromEntries(
+        Object.entries(data).map(([k, v]) => [k.toLowerCase(), v]),
+      );
+      const pfx = fields.certificatepfxbase64 ?? fields.pfxbase64;
+      const password = fields.certificatepassword ?? fields.password ?? "";
+      if (
+        typeof pfx !== "string" ||
+        pfx.length < 4 ||
+        pfx.length > 131072 ||
+        !/^[A-Za-z0-9+/]+={0,2}$/.test(pfx) ||
+        pfx.length % 4 !== 0 ||
+        typeof password !== "string" ||
+        password.length > 4096
+      )
+        throw new CentsysError("protocol", { reason: "invalid-certificate" });
+      return { pfx: Buffer.from(pfx, "base64"), password };
+    });
   }
 
   async discover(signal?: AbortSignal): Promise<Device[]> {
-    return decodeDevices(
-      await this.#request(
-        "GetDevicesByRemoteUserNumber",
-        undefined,
-        true,
-        signal,
-      ),
+    return this.#request(
+      "GetDevicesByRemoteUserNumber",
+      undefined,
+      true,
+      signal,
+      decodeDevices,
     );
   }
 
@@ -214,14 +222,12 @@ export class CentsysReadClient {
       devices.map((device) => ({ serialNumber: device.serialNumber })),
     );
     const serials = validated.map((device) => device.serialNumber);
-    return decodeOverviews(
-      await this.#request(
-        "GetOperatorOverview",
-        { OperatorSerialNumbers: serials },
-        true,
-        signal,
-      ),
-      new Set(serials),
+    return this.#request(
+      "GetOperatorOverview",
+      { OperatorSerialNumbers: serials },
+      true,
+      signal,
+      (value) => decodeOverviews(value, new Set(serials)),
     );
   }
 }

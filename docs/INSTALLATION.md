@@ -1,6 +1,6 @@
 # Installing the development plugin
 
-This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. The first public release, alpha.8, is now available on npm.
+Version 1.0.0 provides a Homebridge GarageDoorOpener accessory, a browser setup wizard, HTTPS monitoring and MQTT control. Alpha.5 completed one owner-confirmed physical open-and-close cycle, with both movement directions and endpoints displayed in Apple Home. Alpha.6 displayed No Response during a real gate Wi-Fi outage, then eventually returned to Closed without a restart. Recovery initially failed despite resumed identity replies; its delay and cause remain unresolved because app closure and diagnostic sessions also occurred. Monitoring/control handover on alpha.6 remains to be verified. Alpha.7 is now installed on iHost and its new Wi-Fi-address helper passed a live identity/status check without movement commands. Version 1.0.0 is prepared for publication on the stable `latest` tag; the hardware evidence above comes from the earlier alpha builds.
 
 ## Requirements and package
 
@@ -9,11 +9,11 @@ This alpha provides a Homebridge GarageDoorOpener accessory, a browser setup wiz
 - Internet access from Homebridge to CENTSYS HTTPS and MQTT services, and GitHub for first-login bootstrap preparation.
 - Homebridge storage mounted on persistent disk. For containers, persist the Homebridge storage volume, not the plugin's install directory.
 
-From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-0.1.0-alpha.8.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
+From a development checkout, `npm ci`, `npm run check` and `npm pack` produce the installable tarball. Install the tarball through the same npm environment used by Homebridge (for example `npm install /absolute/path/homebridge-centsys-1.0.0.tgz` from the Homebridge npm project). The exact install location/global flag depends on that Homebridge deployment; do not install into a different Node environment on the host by accident. Restart Homebridge after installation, then open the plugin's settings. A dedicated child bridge has started successfully on the target iHost runtime and isolates subsequent plugin restarts.
 
-Use `npm install homebridge-centsys@alpha` in the same Homebridge npm environment. Choose the alpha version explicitly when installing through a version-selection UI. The initial release is experimental and has no stable release recommendation. Alpha.8 changes release metadata and documentation; its gate logic matches the alpha.7 build tested on iHost.
+After the stable version is published, use `npm install homebridge-centsys@latest` in the same Homebridge npm environment. Existing installations using `@alpha` must switch to `@latest` to receive stable releases. Version 1.0.0 includes the simplified setup wizard and optional diagnostic logging; it retains the supported controller profile and command safeguards.
 
-## Browser setup (next update: alpha.9)
+## Browser setup
 
 1. Sign in with your MyCentsys phone number and the WhatsApp/SMS code.
 2. Click **Find my gates** and select your gate. If none appears, follow **Gate not found? Get its details from MyCentsys Pro**.
@@ -74,6 +74,21 @@ The normal configuration contains gate names, serials, protocol MAC addresses an
 
 Signing out removes this Homebridge's local session, not the official app's login and not a remotely revoked vendor token. Monitoring notices the missing session on its next poll; an in-flight command rechecks the saved account immediately before activation. Restart after changing accounts or gates to apply configuration changes.
 
+## Diagnostic logging
+
+For intermittent errors, open the CENTSYS plugin settings, enable **Troubleshooting → Diagnostic logging**, click **Save logging settings**, and restart the CENTSYS child bridge. This setting is off by default. In JSON configuration, set `"diagnosticLogging": true` at the platform level alongside `pollInterval` and `gates`.
+
+With diagnostics enabled, warnings include the cloud operation or MQTT session stage, a fixed validation reason, and relevant field names, packet lengths or HTTP status codes. For example:
+
+```text
+Gate 1 status unavailable: The service response did not match the expected protocol. [operation=GetOperatorOverview, reason=expected-integer, field=operatorStatus]
+Gate 1 status recovered after 30s.
+```
+
+Gate numbers follow the saved gate order. Consecutive failures with the same category, operation, stage, reason and field are suppressed; a changed failure or recovery is logged. Recovery duration measures the time since the first reported unavailability, not the age of the controller's measurement. Command failures are labelled separately. The startup line includes the plugin version and confirms when diagnostics are enabled.
+
+These diagnostics exclude credentials, phone numbers, gate names, serials, MAC addresses, request URLs, raw responses and nested exceptions. They do not change polling, response validation or command retries. Capture the next warning and recovery along with the startup line, then turn the setting off and restart when troubleshooting is complete.
+
 ## Monitoring and HomeKit state
 
 The accessory maps Open/Closed/Opening/Closing to HomeKit door states and partly-open/partly-closed to Stopped. Alpha.6 additionally requires a verified live MQTT identity and non-retained telemetry before it exposes an available state. The last live verification expires after 45 seconds, independently of successful HTTPS responses. An expiry timer marks the HomeKit characteristics with communication failure even if cloud polling keeps returning a cached Closed value. This is not a 45-second guarantee for Apple Home's visible tile: the real outage test showed Closed after the plugin reported unavailability, then No Response on a later observation. Missing protocol addresses or unsupported regions remain unavailable; the cloud-preview button and research CLI can still show explicitly labelled cloud-reported status.
@@ -84,7 +99,7 @@ Obstruction remains **unknown internally** unless fresh MQTT telemetry supports 
 
 ## Open/close control
 
-New gates configured through the alpha.9 wizard default to control on. Existing saved off settings, including legacy configurations with no enableControl value, remain off. The UI saves enableControl explicitly and selects the supported control profile. There is no TRG confirmation checkbox; the page explains that control uses the normal open/close trigger. Control requires a D5 Evo SMART+ in South Africa and its protocol MAC address. The installed TRG mode must open a fully closed gate and close a fully open one. Use the cloud device listing's `macAddress`, an address verified by the helper above, or an independently validated protocol address. The Wi-Fi MAC displayed by MyCentsys Pro was not the correct key source on the investigated installation; do not assume the two addresses are interchangeable or apply the observed conversion to every controller. Other motor families/regions are not supported for activation in this alpha.
+New gates configured through the wizard default to control on. Existing saved off settings, including legacy configurations with no enableControl value, remain off. The UI saves enableControl explicitly and selects the supported control profile. There is no TRG confirmation checkbox; the page explains that control uses the normal open/close trigger. Control requires a D5 Evo SMART+ in South Africa and its protocol MAC address. The installed TRG mode must open a fully closed gate and close a fully open one. Use the cloud device listing's `macAddress`, an address verified by the helper above, or an independently validated protocol address. The Wi-Fi MAC displayed by MyCentsys Pro was not the correct key source on the investigated installation; do not assume the two addresses are interchangeable or apply the observed conversion to every controller. Other motor families/regions are not supported for activation in this release.
 
 Each request obtains a new MQTT identity challenge and non-retained telemetry over verified mutual TLS. Matching endpoints/directions are no-ops; opposing motion, intermediate/unknown state, known obstruction or reported inhibiting conditions reject the request. Unknown obstruction is not proof of a clear driveway; enabling control does not establish the installation's safety equipment or suitability for unattended closing.
 

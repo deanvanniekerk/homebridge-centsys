@@ -60,7 +60,11 @@ export function triggerPacket(
     configVersion > 255
   )
     throw new CentsysError("configuration");
-  if (challenge.length !== 4) throw new CentsysError("protocol");
+  if (challenge.length !== 4)
+    throw new CentsysError("protocol", {
+      reason: "packet-length",
+      bytes: challenge.length,
+    });
   // Profile: D5 Evo SMART+ TRG only. No garage RUN or lock commands.
   return Buffer.concat([
     packet(3, Buffer.from([configVersion, 0, 34, 0]), mac),
@@ -84,12 +88,23 @@ export function isResponse(data: Buffer, type: number): boolean {
   );
 }
 export function challengeFrom(data: Buffer, mac: string): Buffer {
-  if (!isResponse(data, 2) || data.length !== 12)
-    throw new CentsysError("protocol");
+  if (data.length !== 12)
+    throw new CentsysError("protocol", {
+      reason: "packet-length",
+      bytes: data.length,
+    });
+  if (!isResponse(data, 2))
+    throw new CentsysError("protocol", {
+      reason: "response-envelope",
+      bytes: data.length,
+    });
   const status = xor(data.subarray(4, 8), mac);
   if (status[0] !== 1) throw new CentsysError("gate-authentication");
   if (status.subarray(1).some((v) => v !== 0))
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", {
+      reason: "identity-padding",
+      bytes: data.length,
+    });
   return Buffer.from(data.subarray(-4));
 }
 export interface ActivationResponse {
@@ -100,8 +115,16 @@ export function decodeActivationResponse(
   data: Buffer,
   mac: string,
 ): ActivationResponse {
-  if (!isResponse(data, 4) || data.length < 6)
-    throw new CentsysError("protocol");
+  if (data.length < 6 || data.length > 128)
+    throw new CentsysError("protocol", {
+      reason: "packet-length",
+      bytes: data.length,
+    });
+  if (!isResponse(data, 4))
+    throw new CentsysError("protocol", {
+      reason: "response-envelope",
+      bytes: data.length,
+    });
   const body = xor(data.subarray(4), mac);
   return { code: body[1]!, configVersion: body[0]! };
 }
@@ -115,9 +138,15 @@ export interface LiveState {
 export function decodeGateTelemetry(data: Buffer): LiveState {
   // Only the known D5 Evo layout: 36-byte body, optionally zero-padded to 64.
   if (data.length !== 40 && data.length !== 68)
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", {
+      reason: "packet-length",
+      bytes: data.length,
+    });
   if (data.length === 68 && data.subarray(40).some((v) => v !== 0))
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", {
+      reason: "telemetry-padding",
+      bytes: data.length,
+    });
   const b = data.subarray(4);
   const states: GateState[] = [
     "open",

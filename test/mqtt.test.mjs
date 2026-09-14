@@ -33,6 +33,7 @@ function broker({
   activationReplies,
   identityStatus = 1,
   identityHeader = 0,
+  telemetryPayload,
   beforeEnd,
 } = {}) {
   const client = new EventEmitter();
@@ -71,7 +72,7 @@ function broker({
         );
         reply[3] = identityHeader;
         incoming("userRemoteTriggerResponse", reply);
-        incoming("deviceOverview", telemetry());
+        incoming("deviceOverview", telemetryPayload ?? telemetry());
       } else if (data[2] === 5) {
         beforeTimeAck?.(incoming);
         incoming("userRemoteTriggerResponse", timeReply);
@@ -362,4 +363,68 @@ test("a finished monitor waits for MQTT teardown before releasing its result", a
   assert.equal(settled, false);
   release();
   assert.equal((await result).activated, false);
+});
+
+test("MQTT diagnostic context survives session teardown and uncertain activation outcomes", async () => {
+  const padded = telemetry();
+  padded[67] = 1;
+  for (const scenario of [
+    {
+      brokerOptions: { identityHeader: 99 },
+      stage: "identity",
+      reason: "response-envelope",
+      bytes: 12,
+    },
+    {
+      brokerOptions: { telemetryPayload: Buffer.alloc(28) },
+      stage: "telemetry",
+      reason: "packet-length",
+      bytes: 28,
+    },
+    {
+      brokerOptions: { telemetryPayload: padded },
+      stage: "telemetry",
+      reason: "telemetry-padding",
+      bytes: 68,
+    },
+    {
+      brokerOptions: { activationReplies: [Buffer.alloc(3)] },
+      stage: "ack",
+      reason: "packet-length",
+      bytes: 3,
+      target: "open",
+    },
+  ]) {
+    const b = broker(scenario.brokerOptions);
+    await assert.rejects(
+      gateSession({
+        ...options,
+        connect: b.connect,
+        ...(scenario.target ? { target: scenario.target } : {}),
+      }),
+      (error) => {
+        assert.equal(
+          error.code,
+          scenario.target ? "command-uncertain" : "protocol",
+        );
+        assert.deepEqual(error.diagnostic, {
+          operation: "mqtt",
+          stage: scenario.stage,
+          reason: scenario.reason,
+          bytes: scenario.bytes,
+        });
+        for (const secret of [
+          options.serialNumber,
+          options.session.mobileNumber,
+          mac,
+        ])
+          assert.ok(!JSON.stringify(error).includes(secret));
+        return true;
+      },
+    );
+    assert.equal(
+      b.sent.filter((x) => x.data[2] === 3).length,
+      scenario.target ? 1 : 0,
+    );
+  }
 });

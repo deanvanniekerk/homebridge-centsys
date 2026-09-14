@@ -1,4 +1,5 @@
 import { CentsysError } from "./errors.js";
+import type { ErrorDiagnostic } from "./errors.js";
 
 export const LIVE_REFRESH_MS = 20_000;
 export const LIVE_EXPIRY_MS = 45_000;
@@ -37,7 +38,7 @@ export interface Overview {
 
 export function record(value: unknown): Record<string, unknown> {
   if (value === null || typeof value !== "object" || Array.isArray(value)) {
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", { reason: "expected-record" });
   }
   return value as Record<string, unknown>;
 }
@@ -58,23 +59,36 @@ export function credential(value: unknown): string {
   return value;
 }
 
-function serial(value: unknown): string {
+function serial(
+  value: unknown,
+  field: NonNullable<ErrorDiagnostic["field"]>,
+): string {
   if (typeof value !== "string" || !/^[A-Za-z0-9:_-]{1,128}$/.test(value)) {
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", {
+      reason: "invalid-serial",
+      field,
+    });
   }
   return value;
 }
 
-function integer(value: unknown): number | null {
+function integer(
+  value: unknown,
+  field: NonNullable<ErrorDiagnostic["field"]>,
+): number | null {
   if (value === undefined || value === null) return null;
   if (typeof value !== "number" || !Number.isSafeInteger(value))
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", { reason: "expected-integer", field });
   return value;
 }
 
-function boolean(value: unknown): boolean | null {
+function boolean(
+  value: unknown,
+  field: NonNullable<ErrorDiagnostic["field"]>,
+): boolean | null {
   if (value === undefined || value === null) return null;
-  if (typeof value !== "boolean") throw new CentsysError("protocol");
+  if (typeof value !== "boolean")
+    throw new CentsysError("protocol", { reason: "expected-boolean", field });
   return value;
 }
 
@@ -82,11 +96,13 @@ function list<T extends { serialNumber: string }>(
   value: unknown,
   parse: (row: unknown) => T,
 ): T[] {
-  if (!Array.isArray(value) || value.length > 256)
-    throw new CentsysError("protocol");
+  if (!Array.isArray(value))
+    throw new CentsysError("protocol", { reason: "expected-list" });
+  if (value.length > 256)
+    throw new CentsysError("protocol", { reason: "too-many-rows" });
   const rows = value.map(parse);
   if (new Set(rows.map((row) => row.serialNumber)).size !== rows.length)
-    throw new CentsysError("protocol");
+    throw new CentsysError("protocol", { reason: "duplicate-identity" });
   return rows;
 }
 
@@ -108,11 +124,11 @@ export function decodeDevices(value: unknown): Device[] {
     const macAddress = discoveryMac(row.macAddress);
     return {
       ...(macAddress ? { macAddress } : {}),
-      serialNumber: serial(row.serialNumber),
-      productCode: integer(row.productCode),
-      productType: integer(row.productType),
-      isWifiDevice: boolean(row.isWifiDevice),
-      online: boolean(wifi.isOnline),
+      serialNumber: serial(row.serialNumber, "serialNumber"),
+      productCode: integer(row.productCode, "productCode"),
+      productType: integer(row.productType, "productType"),
+      isWifiDevice: boolean(row.isWifiDevice, "isWifiDevice"),
+      online: boolean(wifi.isOnline, "isOnline"),
     };
   });
 }
@@ -132,17 +148,18 @@ export function decodeOverviews(
   ];
   return list(value, (value) => {
     const row = record(value);
-    const id = serial(row.operatorSerialNumber);
-    if (!requested.has(id)) throw new CentsysError("protocol");
-    const code = integer(row.operatorStatus);
+    const id = serial(row.operatorSerialNumber, "operatorSerialNumber");
+    if (!requested.has(id))
+      throw new CentsysError("protocol", { reason: "unexpected-identity" });
+    const code = integer(row.operatorStatus, "operatorStatus");
     return {
       serialNumber: id,
       state: code === null ? "unknown" : (states[code] ?? "unknown"),
       stateCode: code,
-      powerSupplyCode: integer(row.powerSupplyStatus),
-      closingBeamCode: integer(row.closingBeamStatus),
-      openingBeamCode: integer(row.openingBeamStatus),
-      theftAlarmCode: integer(row.theftAlarmState),
+      powerSupplyCode: integer(row.powerSupplyStatus, "powerSupplyStatus"),
+      closingBeamCode: integer(row.closingBeamStatus, "closingBeamStatus"),
+      openingBeamCode: integer(row.openingBeamStatus, "openingBeamStatus"),
+      theftAlarmCode: integer(row.theftAlarmState, "theftAlarmState"),
     };
   });
 }

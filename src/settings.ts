@@ -18,6 +18,7 @@ export interface GateConfig {
 }
 export interface CentsysConfig {
   pollInterval: number;
+  diagnosticLogging: boolean;
   gates: GateConfig[];
 }
 export function gateIdentity(value: unknown): string {
@@ -27,6 +28,11 @@ export function gateIdentity(value: unknown): string {
 }
 export function parseConfig(value: unknown): CentsysConfig {
   const row = record(value);
+  if (
+    row.diagnosticLogging !== undefined &&
+    typeof row.diagnosticLogging !== "boolean"
+  )
+    throw new CentsysError("configuration");
   const interval = row.pollInterval ?? 15;
   if (
     typeof interval !== "number" ||
@@ -71,5 +77,9 @@ export function parseConfig(value: unknown): CentsysConfig {
   });
   if (new Set(gates.map((g) => g.serialNumber)).size !== gates.length)
     throw new CentsysError("configuration");
-  return { pollInterval: interval, gates };
+  return {
+    pollInterval: interval,
+    diagnosticLogging: row.diagnosticLogging === true,
+    gates,
+  };
 }

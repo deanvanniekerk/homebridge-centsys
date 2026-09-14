@@ -1,6 +1,6 @@
 {
   "name": "homebridge-centsys",
-  "version": "0.1.0-alpha.9",
+  "version": "1.0.0",
   "description": "CENTSYS SMART+ gate monitoring and control for Homebridge",
   "type": "module",
   "engines": {
@@ -60,7 +60,7 @@
   },
   "publishConfig": {
     "access": "public",
-    "tag": "alpha",
+    "tag": "latest",
     "registry": "https://registry.npmjs.org/"
   },
   "packageManager": "npm@10.9.8"

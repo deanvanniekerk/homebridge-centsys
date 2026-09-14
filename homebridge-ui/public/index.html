@@ -186,6 +186,29 @@
       </button>
     </form>
   </section>
+  <section aria-labelledby="diagnostics-heading">
+    <h4 id="diagnostics-heading">Troubleshooting</h4>
+    <label class="check-label">
+      <input
+        id="diagnostic-logging"
+        type="checkbox"
+        aria-describedby="diagnostic-help"
+      />
+      Diagnostic logging
+    </label>
+    <p id="diagnostic-help" class="hint">
+      Add error details and status recovery messages to the Homebridge log.
+      Credentials, gate identifiers and raw responses are excluded. Off by
+      default.
+    </p>
+    <button
+      id="save-diagnostics"
+      class="btn btn-outline-secondary"
+      type="button"
+    >
+      Save logging settings
+    </button>
+  </section>
   <p class="hint">
     After saving, restart the CENTSYS child bridge to apply changes.
   </p>

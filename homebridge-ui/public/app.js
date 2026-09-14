@@ -143,13 +143,14 @@
     el("gate-state").textContent = "";
     showAddressMode();
   });
-  async function saveConfig(nextGates) {
+  async function saveConfig(nextGates, settings = {}) {
     const next = [...configs];
     const block = {
       ...(index < 0 ? {} : configs[index]),
       platform: "Centsys",
       name: "CENTSYS",
       gates: nextGates,
+      ...settings,
     };
     if (index < 0) next.push(block);
     else next[index] = block;
@@ -395,9 +396,23 @@
         );
       }),
   );
+  el("save-diagnostics").addEventListener(
+    "click",
+    () =>
+      void task(async () => {
+        await saveConfig(gates, {
+          diagnosticLogging: el("diagnostic-logging").checked,
+        });
+        notify(
+          "Logging settings saved. Restart the CENTSYS child bridge to apply them.",
+        );
+      }),
+  );
   void task(async () => {
     configs = await ui.getPluginConfig();
     index = configs.findIndex((c) => c.platform === "Centsys");
+    el("diagnostic-logging").checked =
+      index >= 0 && configs[index].diagnosticLogging === true;
     gates =
       index >= 0 && Array.isArray(configs[index].gates)
         ? configs[index].gates

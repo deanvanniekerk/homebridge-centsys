@@ -18,6 +18,12 @@
         "minimum": 10,
         "maximum": 300
       },
+      "diagnosticLogging": {
+        "title": "Diagnostic logging",
+        "type": "boolean",
+        "default": false,
+        "description": "Include safe error details and status recovery messages in the Homebridge log. Save and restart the child bridge to apply."
+      },
       "gates": {
         "type": "array",
         "maxItems": 10,

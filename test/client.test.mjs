@@ -400,3 +400,62 @@ test("discovery retains only valid protocol MACs without converting Wi-Fi addres
     assert.equal(result.macAddress, undefined);
   }
 });
+
+test("HTTP diagnostics identify the operation and safe failure reason without server text", async (t) => {
+  for (const scenario of [
+    {
+      body: "private-invalid-json",
+      operation: "GetOperatorOverview",
+      reason: "invalid-json",
+    },
+    {
+      body: JSON.stringify({
+        password: "private-password",
+        pfxbase64: "private-pfx",
+      }),
+      operation: "GetCertificate",
+      reason: "invalid-certificate",
+    },
+    {
+      body: "private-server-error",
+      operation: "GetOperatorOverview",
+      httpStatus: 503,
+    },
+  ]) {
+    await t.test(scenario.reason ?? "http-status", async () => {
+      const client = new CentsysReadClient({
+        mobileNumber: number,
+        region: "za",
+        sessionToken,
+        fetch: async () =>
+          new Response(scenario.body, { status: scenario.httpStatus ?? 200 }),
+      });
+      await assert.rejects(
+        scenario.operation === "GetCertificate"
+          ? client.certificate()
+          : client.overview([device]),
+        (error) => {
+          assert.equal(error.diagnostic.operation, scenario.operation);
+          assert.equal(error.diagnostic.reason, scenario.reason);
+          assert.equal(error.diagnostic.status, scenario.httpStatus);
+          assert.ok(!JSON.stringify(error).includes("private"));
+          return true;
+        },
+      );
+    });
+  }
+  const client = new CentsysReadClient({
+    mobileNumber: number,
+    region: "za",
+    sessionToken,
+    fetch: async () => {
+      throw new Error("private-url-and-token");
+    },
+  });
+  await assert.rejects(client.overview([device]), (error) => {
+    assert.equal(error.code, "transport");
+    assert.equal(error.diagnostic.operation, "GetOperatorOverview");
+    assert.ok(!JSON.stringify(error).includes("private"));
+    return true;
+  });
+});

@@ -2,11 +2,17 @@
 
 This project follows AquaTemp's manual GitHub Actions release procedure. The package is `homebridge-centsys`: stable versions use `latest`, `X.Y.Z-alpha.N` uses `alpha`, and `X.Y.Z-beta.N` uses `beta`. Publication is an explicit maintainer decision. Hardware evidence and limitations are recorded separately in [validation](VALIDATION.md).
 
-## Stable release 1.0.0
+## Release 1.1.0
 
-This checkout prepares the first stable release, `1.0.0`, using `publishConfig.tag: latest`. It includes the simplified gate setup and control-setting persistence from alpha.9, plus optional diagnostic logging for cloud and MQTT failures. Diagnostic logging is off by default and can be enabled in the setup wizard or with `diagnosticLogging: true` in the platform configuration. Safe failure context survives error handling, repeated failures are suppressed, and status recovery is reported.
+Version `1.1.0` includes the MQTT identity-response compatibility fix from PR #5. The parser accepts nonzero values in three unspecified identity bytes while retaining the expected length, header, successful status byte and fresh-telemetry checks. Physical-controller confirmation remains pending.
 
-The release keeps the existing D5 Evo SMART+ / South Africa support scope and command safeguards. It does not establish new hardware validation or resolve the intermittent protocol failures by itself; the new diagnostics enable their investigation. Existing alpha installations should select `@latest` after publication. Follow the procedure below after the PR is reviewed and merged, approving version `1.0.0`.
+After this version change is reviewed and merged, dispatch **Publish npm release** on `main` with `approved_version` set to `1.1.0`. That input approves the version already recorded in `package.json`; it does not bump the version. The earlier release attempt approved `1.1.0` while the package still contained `1.0.0`, so the guard stopped it before packing or publishing. Version `1.0.0` is already published and cannot be reused.
+
+## Stable release 1.0.0 (published)
+
+The first stable release, `1.0.0`, was published using `publishConfig.tag: latest`. It includes the simplified gate setup and control-setting persistence from alpha.9, plus optional diagnostic logging for cloud and MQTT failures. Diagnostic logging is off by default and can be enabled in the setup wizard or with `diagnosticLogging: true` in the platform configuration. Safe failure context survives error handling, repeated failures are suppressed, and status recovery is reported.
+
+The release keeps the existing D5 Evo SMART+ / South Africa support scope and command safeguards. It does not establish new hardware validation or resolve the intermittent protocol failures by itself; the new diagnostics enable their investigation. Existing alpha installations should select `@latest` after publication. Follow the procedure below for subsequent releases, approving each new version exactly.
 
 ## Publisher configuration
 

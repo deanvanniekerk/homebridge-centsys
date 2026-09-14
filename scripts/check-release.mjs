@@ -15,7 +15,7 @@ if (!version) {
 }
 if (approved !== metadata.version) {
   throw new Error(
-    "Publication requires a separate release decision: approve the exact package version.",
+    `Release approval must match package.json version ${metadata.version}. The approved_version input does not change the package version.`,
   );
 }
 const tag = version[5] ?? "latest";

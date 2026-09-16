@@ -4,6 +4,17 @@ Release notes for `homebridge-centsys` live here. The release workflow publishes
 the section matching `package.json` to GitHub, so the npm package, tag and GitHub
 release all use the same version and notes.
 
+## [1.1.2] - 2026-09-16
+
+### Added
+
+- Show a sanitized Homebridge setup screen in the README.
+
+### Changed
+
+- Improve npm and Homebridge plugin discovery for CENTURION and gate-related
+  searches.
+
 ## [1.1.1] - 2026-09-14
 
 ### Changed

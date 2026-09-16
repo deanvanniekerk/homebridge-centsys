@@ -2,6 +2,10 @@
 
 A Homebridge plugin for CENTURION / CENTSYS SMART+ gates, with a browser login wizard, gate-state monitoring and open/close control.
 
+<img src="docs/images/homebridge-centsys-settings.png" alt="Homebridge Centsys setup screen with example gate details" width="600">
+
+_Account and controller identifiers are replaced with example values._
+
 Hardware validation includes one owner-confirmed physical open-and-close cycle through Apple Home on iHost. Both commands received success responses on their first attempt, and Home displayed Opening → Open → Closing → Closed. Reliability and real gate-offline testing remain in progress. Automatic account discovery is empty on this installation, so setup supports a manually supplied serial and validated protocol address. See the [changelog](CHANGELOG.md) for versioned release notes.
 
 The tested controller is **D5 Evo SMART+**, Core and Comms Interface firmware **2.1.0.0**. Command handling is limited to this profile in South Africa. In the setup wizard, control defaults on for new gates; existing saved off settings stay off. It requires a fresh MQTT session, serializes commands and never automatically repeats an uncertain activation. One explicit configuration-version mismatch permits a corrected-version retry; this negotiation is tested in simulation and awaits hardware validation.

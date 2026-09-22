@@ -21,8 +21,15 @@ See [installation, storage and control limitations](docs/INSTALLATION.md). For i
 ```sh
 npm ci
 npm run check
-npm pack
+npm pack --dry-run --json
 ```
+
+The plugin and settings wizard are authored in TypeScript. Biome checks source
+formatting and lint, Vitest runs colocated tests, and `npm run build` compiles
+`src/` into nested `dist/` modules plus `homebridge-ui/app.ts` into the browser
+script shipped at `homebridge-ui/public/app.js`. See the
+[project structure](docs/PROJECT_STRUCTURE.md) for ownership and package
+contracts.
 
 The independent research CLI remains available:
 

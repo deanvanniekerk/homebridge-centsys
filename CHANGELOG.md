@@ -4,6 +4,17 @@ Release notes for `homebridge-centsys` live here. The release workflow publishes
 the section matching `package.json` to GitHub, so the npm package, tag and GitHub
 release all use the same version and notes.
 
+## [1.1.3] - 2026-09-22
+
+### Changed
+
+- Author the Homebridge settings wizard in TypeScript and build its browser
+  JavaScript with the plugin. Existing setup behavior is unchanged.
+- Group cloud, authentication, setup, gate and Homebridge modules by ownership;
+  validate object inputs with Zod while retaining fixed safe error categories.
+- Run colocated TypeScript tests with Vitest and use Biome for formatting and
+  linting. Check the published tarball for nested modules and UI assets.
+
 ## [1.1.2] - 2026-09-16
 
 ### Added

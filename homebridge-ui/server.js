@@ -1,1 +1,1 @@
-import "../dist/ui-server.js";
+import '../dist/ui-server.js';

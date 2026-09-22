@@ -1,6 +1,7 @@
 # Node / TypeScript output
 node_modules/
 dist/
+homebridge-ui/public/app.js
 coverage/
 *.tsbuildinfo
 *.log

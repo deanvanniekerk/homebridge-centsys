@@ -22,5 +22,5 @@ docker run --rm --platform linux/arm/v7 --entrypoint /bin/sh \
     cd /tmp/centsys-check
     node -e '\''if (process.arch !== "arm" || Number(process.config.variables.arm_version) !== 7) process.exit(1)'\''
     npm ci --no-audit --no-fund
-    npm run check
+    npm run check:runtime
   '

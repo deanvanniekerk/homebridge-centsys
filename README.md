@@ -1,5 +1,7 @@
 # homebridge-centsys
 
+[![verified-by-homebridge](https://img.shields.io/badge/_-verified-blueviolet?color=%23491F59&style=flat&logoColor=%23FFFFFF&logo=homebridge)](https://github.com/homebridge/homebridge/wiki/Verified-Plugins)
+
 A Homebridge plugin for CENTURION / CENTSYS SMART+ gates, with a browser login wizard, gate-state monitoring and open/close control.
 
 <img src="docs/images/homebridge-centsys-settings.png" alt="Homebridge Centsys setup screen with example gate details" width="600">

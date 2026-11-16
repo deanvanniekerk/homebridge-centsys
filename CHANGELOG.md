@@ -4,6 +4,27 @@ Release notes for `homebridge-centsys` live here. The release workflow publishes
 the section matching `package.json` to GitHub, so the npm package, tag and GitHub
 release all use the same version and notes.
 
+## [1.2.0] - 2026-11-16
+
+### Added
+
+- Support accounts on the Australian / New Zealand datacentre for live state,
+  open/close control and Wi-Fi address verification, using that datacentre's
+  MQTT broker. This path is experimental until validated on hardware.
+- Optional **Gate time zone** setting (IANA name, for example
+  `Australia/Perth`) for the controller time sync sent before each activation.
+- The setup wizard picks the datacentre from the phone number (+61/+64 use
+  Australia & New Zealand) unless one is chosen explicitly.
+
+### Changed
+
+- Remove the South Africa-only checks. The region setting now only selects the
+  datacentre, so accounts from any country hosted there can be used.
+- Send the controller's local time in the configured or host time zone instead
+  of a fixed UTC+2. A host reporting UTC falls back to Johannesburg or Sydney
+  time by datacentre, so existing South African installations keep sending the
+  same time.
+
 ## [1.1.3] - 2026-09-22
 
 ### Changed

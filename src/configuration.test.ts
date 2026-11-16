@@ -75,3 +75,19 @@ test('Homebridge schema and runtime share bounds while the wizard controls new-g
     (error) => error.code === 'configuration',
   );
 });
+
+test('optional controller time zone must be a valid IANA zone; blank means automatic', async () => {
+  assert.equal('timeZone' in parseConfig({}), false);
+  assert.equal('timeZone' in parseConfig({ timeZone: '  ' }), false);
+  assert.equal('timeZone' in parseConfig({ timeZone: null }), false);
+  assert.equal(parseConfig({ timeZone: ' Australia/Perth ' }).timeZone, 'Australia/Perth');
+  for (const timeZone of ['Australia/Nowhere', 42, {}])
+    assert.throws(
+      () => parseConfig({ timeZone }),
+      (e) => e.code === 'configuration',
+    );
+  const schema = JSON.parse(
+    await readFile(new URL('../config.schema.json', import.meta.url), 'utf8'),
+  );
+  assert.equal(schema.schema.properties.timeZone.type, 'string');
+});

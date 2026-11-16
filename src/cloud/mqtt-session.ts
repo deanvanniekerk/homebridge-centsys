@@ -5,6 +5,7 @@ import mqtt from 'mqtt';
 import type { Session } from '../auth/storage.js';
 import { gateIdentity } from '../configuration.js';
 import { CentsysError } from '../errors.js';
+import { datacentres } from './datacentre.js';
 import type { ActivationResponse, LiveState, Target } from './mqtt-codec.js';
 import {
   challengeFrom,
@@ -16,6 +17,7 @@ import {
   timePacket,
   triggerPacket,
 } from './mqtt-codec.js';
+import { controllerTimeZone } from './time-zone.js';
 
 type ConnectOptions = IClientOptions & Pick<ConnectionOptions, 'pfx' | 'passphrase'>;
 interface Options {
@@ -27,6 +29,8 @@ interface Options {
   macAddress: string;
   certificate: { pfx: Buffer; password: string };
   target?: Target;
+  /** IANA zone for controller time sync; defaults from the host, then the datacentre. */
+  timeZone?: string;
   signal?: AbortSignal;
   /** Recheck local session/configuration immediately before a physical command. */
   beforeActivation?: () => Promise<void>;
@@ -48,7 +52,8 @@ export async function gateSession(options: Options): Promise<MqttResult> {
     (!Number.isInteger(options.timeoutMs) || options.timeoutMs < 5 || options.timeoutMs > 30000)
   )
     throw new CentsysError('configuration');
-  if (options.session.region !== 'za') throw new CentsysError('control-disabled');
+  const datacentre = datacentres[options.session.region];
+  if (!datacentre) throw new CentsysError('configuration');
   const serial = gateIdentity(options.serialNumber);
   const identity = identityPacket(options.session.mobileNumber, options.macAddress);
   const ca = await readFile(new URL('../../resources/centsys-ca.crt', import.meta.url));
@@ -142,7 +147,14 @@ export async function gateSession(options: Options): Promise<MqttResult> {
           return;
         }
         stage = 'time';
-        publish('userRemoteTrigger', timePacket(options.macAddress), 'userRemoteTriggerResponse');
+        publish(
+          'userRemoteTrigger',
+          timePacket(
+            options.macAddress,
+            controllerTimeZone(options.session.region, options.timeZone),
+          ),
+          'userRemoteTriggerResponse',
+        );
       } catch (error) {
         finish(error instanceof CentsysError ? error : new CentsysError('protocol'));
       }
@@ -170,7 +182,7 @@ export async function gateSession(options: Options): Promise<MqttResult> {
     try {
       const connectionOptions: ConnectOptions = {
         protocol: 'mqtts',
-        host: '20.87.192.195',
+        host: datacentre.mqttHost,
         port: 8880,
         servername: 'CentsysQA',
         ca,

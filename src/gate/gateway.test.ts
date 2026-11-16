@@ -19,17 +19,17 @@ const live = {
   inhibited: false,
   batteryVoltage: 13.4,
 };
-async function setup(t, runSession) {
+async function setup(t, runSession, { region = 'za', timeZone = undefined } = {}) {
   const directory = await mkdtemp(join(tmpdir(), 'centsys-gateway-'));
   t.after(() => rm(directory, { recursive: true, force: true }));
-  await saveSession({ mobileNumber: '+27820000000', region: 'za', token: 'fake' }, directory);
+  await saveSession({ mobileNumber: '+27820000000', region, token: 'fake' }, directory);
   t.mock.method(globalThis, 'fetch', async (url) => {
     const path = new URL(url).pathname;
     if (path === '/GetCertificate') return Response.json({ pfxBase64: 'AAAA', password: 'fake' });
     assert.equal(path, '/GetOperatorOverview');
     return Response.json([{ operatorSerialNumber: gate.serialNumber, operatorStatus: 2 }]);
   });
-  return new CloudGateway(directory, undefined, { runSession });
+  return new CloudGateway(directory, undefined, { runSession, ...(timeZone ? { timeZone } : {}) });
 }
 test('cached HTTPS Closed cannot keep an offline controller available', async (t) => {
   t.mock.timers.enable({ apis: ['Date'], now: 100000 });
@@ -137,4 +137,27 @@ test('a UI session lease blocks runtime monitoring and activation before MQTT co
       (e) => e.code === 'busy',
     );
   });
+});
+
+test('Australian accounts get live state and control with the configured time zone', async (t) => {
+  const calls = [];
+  const gateway = await setup(
+    t,
+    async (options) => {
+      calls.push({
+        region: options.session.region,
+        target: options.target,
+        timeZone: options.timeZone,
+      });
+      return { live, activated: options.target !== undefined };
+    },
+    { region: 'au', timeZone: 'Australia/Adelaide' },
+  );
+  const signal = new AbortController().signal;
+  assert.equal((await gateway.read([gate], signal))[0].state, 'closed');
+  await gateway.activate(gate, 'open', signal, () => {});
+  assert.deepEqual(calls, [
+    { region: 'au', target: undefined, timeZone: undefined },
+    { region: 'au', target: 'open', timeZone: 'Australia/Adelaide' },
+  ]);
 });

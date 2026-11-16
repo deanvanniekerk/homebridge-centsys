@@ -35,6 +35,7 @@ function broker({
 } = {}) {
   const client = new EventEmitter();
   const sent = [];
+  const connections = [];
   let ended = false;
   let activationCount = 0;
   client.end = (_force, _opts, callback) => {
@@ -107,7 +108,9 @@ function broker({
   };
   return {
     sent,
+    connections,
     connect: (opts) => {
+      connections.push(opts);
       assert.equal(opts.rejectUnauthorized, true);
       assert.equal(opts.reconnectPeriod, 0);
       queueMicrotask(() => {
@@ -419,4 +422,56 @@ test('status-1 identity replies tolerate unspecified bytes and still require liv
     (e) => e.code === 'gate-authentication',
   );
   assert.equal(rejected.sent.filter((p) => [3, 5].includes(p.data[2])).length, 0);
+});
+
+test('each datacentre uses its own broker with the shared pinned certificate name', async () => {
+  for (const [region, host] of [
+    ['za', '20.87.192.195'],
+    ['au', '20.213.185.54'],
+  ]) {
+    const b = broker();
+    await gateSession({ ...options, session: { ...options.session, region }, connect: b.connect });
+    assert.equal(b.connections[0].host, host);
+    assert.equal(b.connections[0].port, 8880);
+    assert.equal(b.connections[0].servername, 'CentsysQA');
+  }
+  await assert.rejects(
+    gateSession({ ...options, session: { ...options.session, region: 'eu' } }),
+    (e) => e.code === 'configuration',
+  );
+});
+test('Australian control is not region-locked and syncs time in the configured zone', async () => {
+  const b = broker();
+  const before = new Date();
+  const result = await gateSession({
+    ...options,
+    session: { mobileNumber: '+61400000000', region: 'au', token: 'fake' },
+    target: 'open',
+    timeZone: 'Australia/Perth',
+    connect: b.connect,
+  });
+  const after = new Date();
+  assert.equal(result.activated, true);
+  const key = Buffer.from('38983fba4dbfab9c', 'hex');
+  for (const [i, byte] of [0xaa, 0xbb, 0xcc, 0xdd].entries()) key[i] ^= byte;
+  const time = b.sent.find((x) => x.data[2] === 5);
+  const [, minute, hour, weekday, day, month] = [...time.data.subarray(4)].map(
+    (v, i) => v ^ key[i],
+  );
+  const perth = (date) => {
+    const local = new Date(date.getTime() + 8 * 60 * 60 * 1000);
+    return [
+      local.getUTCMinutes(),
+      local.getUTCHours(),
+      (local.getUTCDay() + 6) % 7,
+      local.getUTCDate(),
+      local.getUTCMonth(),
+    ];
+  };
+  assert.ok(
+    [perth(before), perth(after)].some(
+      (expected) =>
+        JSON.stringify(expected) === JSON.stringify([minute, hour, weekday, day, month]),
+    ),
+  );
 });

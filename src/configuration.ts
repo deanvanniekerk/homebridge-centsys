@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isTimeZone } from './cloud/time-zone.js';
 import { CentsysError } from './errors.js';
 
 const serialSchema = z
@@ -42,6 +43,17 @@ const configurationSchema = z.object({
     .preprocess((value) => value ?? undefined, z.number().int().min(10).max(300).optional())
     .default(15),
   diagnosticLogging: z.boolean().optional().default(false),
+  timeZone: z
+    .preprocess(
+      (value) =>
+        typeof value === 'string' && value.trim() === '' ? undefined : (value ?? undefined),
+      z
+        .string()
+        .transform((value) => value.trim())
+        .refine(isTimeZone)
+        .optional(),
+    )
+    .optional(),
   gates: z
     .preprocess(
       (value) => value ?? undefined,
@@ -64,6 +76,8 @@ export interface GateConfig {
 export interface CentsysConfig {
   pollInterval: number;
   diagnosticLogging: boolean;
+  /** IANA zone used for controller time sync; omitted means the host, then the datacentre. */
+  timeZone?: string;
   gates: GateConfig[];
 }
 
@@ -76,5 +90,6 @@ export function gateIdentity(value: unknown): string {
 export function parseConfig(value: unknown): CentsysConfig {
   const result = configurationSchema.safeParse(value);
   if (!result.success) throw new CentsysError('configuration');
-  return result.data;
+  const { timeZone, ...config } = result.data;
+  return timeZone ? { ...config, timeZone } : config;
 }

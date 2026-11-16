@@ -19,12 +19,14 @@ export class CloudGateway {
   #reading: { abort: AbortController; promise: Promise<Overview[]> } | undefined;
   #command = false;
   readonly #runSession: typeof gateSession;
+  readonly #timeZone: string | undefined;
   constructor(
     readonly directory: string,
     readonly onActivationResponse?: (response: ActivationResponse & { attempt: number }) => void,
-    dependencies: { runSession?: typeof gateSession } = {},
+    dependencies: { runSession?: typeof gateSession; timeZone?: string } = {},
   ) {
     this.#runSession = dependencies.runSession ?? gateSession;
+    this.#timeZone = dependencies.timeZone;
   }
   async #load() {
     const session = await readSession(this.directory);
@@ -81,7 +83,7 @@ export class CloudGateway {
     const refreshed = new Set<string>();
     for (const gate of gates) {
       signal.throwIfAborted();
-      if (!gate.macAddress || session.region !== 'za') throw new CentsysError('state-unavailable');
+      if (!gate.macAddress) throw new CentsysError('state-unavailable');
       const key = this.#key(gate);
       const previous = this.#verified.get(key);
       if (previous && Date.now() - previous.at < LIVE_REFRESH_MS) continue;
@@ -141,6 +143,7 @@ export class CloudGateway {
         macAddress: gate.macAddress,
         certificate: await this.#getCertificate(client, signal),
         target,
+        ...(this.#timeZone ? { timeZone: this.#timeZone } : {}),
         signal,
         onState: (live) => {
           if (signal.aborted) return;

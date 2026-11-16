@@ -24,6 +24,12 @@
         "default": false,
         "description": "Include safe error details and status recovery messages in the Homebridge log. Save and restart the child bridge to apply."
       },
+      "timeZone": {
+        "title": "Gate time zone",
+        "type": "string",
+        "maxLength": 64,
+        "description": "Optional IANA time zone sent to the controller when it is opened or closed, for example Australia/Perth. Leave blank to use the Homebridge host's time zone; a host set to UTC falls back to the account's datacentre (Africa/Johannesburg or Australia/Sydney)."
+      },
       "gates": {
         "type": "array",
         "maxItems": 10,

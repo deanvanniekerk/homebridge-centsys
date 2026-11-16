@@ -78,7 +78,7 @@ test('setup returns an address only after one identity-only live verification an
   assert.deepEqual(await readdir(root), ['session.json']);
 });
 
-test('verification rejects unsupported region, failed identity, missing telemetry and changed account without another attempt', async (t) => {
+test('verification rejects failed identity, missing telemetry and changed account without another attempt', async (t) => {
   const root = await directory(t);
   let calls = 0;
   let failure = 'gate-authentication';
@@ -105,7 +105,23 @@ test('verification rejects unsupported region, failed identity, missing telemetr
     );
   }
   assert.equal(calls, 4);
-  await saveSession({ ...session, region: 'au' }, root);
-  await assert.rejects(setup.verifyWifiAddress(input), (e) => e.code === 'control-disabled');
-  assert.equal(calls, 4);
+});
+
+test('verification is not region-locked: an Australian account verifies the candidate', async (t) => {
+  const root = await directory(t);
+  await saveSession({ ...session, mobileNumber: '+61400000000', region: 'au' }, root);
+  const regions = [];
+  const setup = new SetupService({
+    directory: root,
+    createClient: () => ({
+      certificate: async () => ({ pfx: Buffer.from('test'), password: 'test' }),
+    }),
+    verifySession: async (options) => {
+      regions.push(options.session.region);
+      return { live, activated: false };
+    },
+  });
+  const result = await setup.verifyWifiAddress(input);
+  assert.equal(result.verified, true);
+  assert.deepEqual(regions, ['au']);
 });

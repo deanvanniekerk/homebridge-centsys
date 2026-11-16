@@ -11,11 +11,8 @@ import {
   normalizeNumber,
   regionSchema,
 } from './cloud-protocol.js';
+import { datacentres } from './datacentre.js';
 
-const origins = {
-  za: 'https://centsys.southafricanorth.cloudapp.azure.com:4445',
-  au: 'https://centsys.australiaeast.cloudapp.azure.com:4445',
-};
 type Operation =
   | 'SendOtp'
   | 'ValidateOtp'
@@ -44,7 +41,7 @@ export class CentsysReadClient {
   constructor(options: ClientOptions) {
     this.#mobileNumber = normalizeNumber(options.mobileNumber);
     if (!regionSchema.safeParse(options.region).success) throw new CentsysError('configuration');
-    this.#origin = origins[options.region];
+    this.#origin = datacentres[options.region].gateway;
     this.#fetch = options.fetch ?? globalThis.fetch;
     this.#timeoutMs = options.timeoutMs ?? 10_000;
     if (!Number.isInteger(this.#timeoutMs) || this.#timeoutMs < 1 || this.#timeoutMs > 30_000) {

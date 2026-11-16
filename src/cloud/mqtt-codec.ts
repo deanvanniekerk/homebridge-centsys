@@ -1,6 +1,7 @@
 import { CentsysError } from '../errors.js';
 import type { GateState } from '../gate/gate-model.js';
 import { normalizeNumber } from './cloud-protocol.js';
+import { wallClock } from './time-zone.js';
 
 // Adapted from the pinned MIT reference; see THIRD_PARTY_NOTICES.md.
 const baseKey = Buffer.from('38983fba4dbfab9c', 'hex');
@@ -30,19 +31,19 @@ export function identityPacket(phone: string, mac: string): Buffer {
   });
   return packet(1, body, mac);
 }
-export function timePacket(mac: string, now = new Date()): Buffer {
-  // This initial command profile is restricted to South Africa, including DST-independent time.
-  const local = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+/** Time sync carries the controller's local wall-clock time in `timeZone`. */
+export function timePacket(mac: string, timeZone: string, now = new Date()): Buffer {
+  const local = wallClock(now, timeZone);
   return packet(
     5,
     Buffer.from([
-      local.getUTCSeconds(),
-      local.getUTCMinutes(),
-      local.getUTCHours(),
-      (local.getUTCDay() + 6) % 7,
-      local.getUTCDate(),
-      local.getUTCMonth(),
-      local.getUTCFullYear() - 2000,
+      local.second,
+      local.minute,
+      local.hour,
+      local.weekday,
+      local.day,
+      local.month,
+      local.year - 2000,
       0,
     ]),
     mac,

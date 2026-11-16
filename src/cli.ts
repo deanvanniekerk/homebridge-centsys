@@ -46,7 +46,8 @@ async function login(): Promise<void> {
     const mobileNumber = normalizeNumber(
       await ask('Registered phone number, including +country code: '),
     );
-    const regionInput = (await ask('Region [za/au, default za]: ')) || 'za';
+    const regionInput =
+      (await ask('Datacentre [za/au, default za; au for Australia/New Zealand]: ')) || 'za';
     if (regionInput !== 'za' && regionInput !== 'au') throw new CentsysError('configuration');
     const channel =
       (await ask('Send one OTP via [whatsapp/sms, default whatsapp]: ')) || 'whatsapp';

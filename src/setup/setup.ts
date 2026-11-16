@@ -194,7 +194,6 @@ export class SetupService {
     return this.#exclusive(async () => {
       const candidate = wifiMacCandidate(input);
       const session = await readSession(this.#directory);
-      if (session.region !== 'za') throw new CentsysError('control-disabled');
       const deadline = AbortSignal.timeout(30_000);
       try {
         return await withSessionLock(this.#directory, deadline, async (signal) => {

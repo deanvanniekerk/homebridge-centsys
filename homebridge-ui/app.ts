@@ -11,6 +11,7 @@ interface PluginConfig {
   name?: string;
   gates?: GateConfig[];
   diagnosticLogging?: boolean;
+  timeZone?: string | undefined;
   [key: string]: unknown;
 }
 
@@ -74,10 +75,20 @@ interface Elements {
   'remove-gate': HTMLButtonElement;
   'save-diagnostics': HTMLButtonElement;
   serial: HTMLInputElement;
+  'time-zone': HTMLInputElement;
   'verify-wifi': HTMLButtonElement;
   'wifi-helper': HTMLDivElement;
   'wifi-mac': HTMLInputElement;
   'wifi-model-confirmed': HTMLInputElement;
+}
+
+function validTimeZone(value: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: value });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 (() => {
@@ -141,7 +152,7 @@ interface Elements {
           'The controller rejected this candidate address. Check the serial, Wi-Fi MAC and model; no gate command was sent.',
         timeout:
           'Verification timed out. Leave the gate Wi-Fi on, close the official apps and allow reconnection time before trying again.',
-        'control-disabled': 'Address verification is unavailable for this model or region.',
+        'control-disabled': 'Address verification is unavailable for this model.',
         'state-unavailable':
           'No usable live status was verified. The candidate address was not applied.',
         configuration: 'Check the phone number, serial number and selected options.',
@@ -236,13 +247,14 @@ interface Elements {
   });
   async function saveConfig(nextGates: GateConfig[], settings: Partial<PluginConfig> = {}) {
     const next = [...configs];
-    const block = {
+    const block: PluginConfig = {
       ...(index < 0 ? {} : configs[index]),
       platform: 'Centsys',
       name: 'CENTSYS',
       gates: nextGates,
       ...settings,
     };
+    if (block.timeZone === undefined) delete block.timeZone;
     if (index < 0) next.push(block);
     else next[index] = block;
     await ui.updatePluginConfig(next);
@@ -337,6 +349,19 @@ interface Elements {
         notify('Address verified. Save your gate below.');
       }),
   );
+  // The account's datacentre follows its country unless the user picks one explicitly.
+  let regionChosen = false;
+  el('region').addEventListener('change', () => {
+    regionChosen = true;
+  });
+  el('phone').addEventListener('input', () => {
+    if (regionChosen) return;
+    const number = el('phone')
+      .value.replace(/[\s()-]/g, '')
+      .replace(/^00/, '+');
+    if (/^\+(61|64)/.test(number)) el('region').value = 'au';
+    else if (/^\+\d/.test(number)) el('region').value = 'za';
+  });
   el('login-form').addEventListener('submit', (event) => {
     event.preventDefault();
     void task(async () => {
@@ -468,16 +493,24 @@ interface Elements {
     'click',
     () =>
       void task(async () => {
+        const timeZone = el('time-zone').value.trim();
+        if (timeZone && !validTimeZone(timeZone)) {
+          notify('Enter an IANA time zone such as Australia/Perth, or leave it blank.');
+          return;
+        }
         await saveConfig(gates, {
           diagnosticLogging: el('diagnostic-logging').checked,
+          ...(timeZone ? { timeZone } : { timeZone: undefined }),
         });
-        notify('Logging settings saved. Restart the CENTSYS child bridge to apply them.');
+        notify('Advanced settings saved. Restart the CENTSYS child bridge to apply them.');
       }),
   );
   void task(async () => {
     configs = await ui.getPluginConfig();
     index = configs.findIndex((c) => c.platform === 'Centsys');
     el('diagnostic-logging').checked = index >= 0 && configs[index]?.diagnosticLogging === true;
+    const savedTimeZone = index >= 0 ? configs[index]?.timeZone : undefined;
+    el('time-zone').value = typeof savedTimeZone === 'string' ? savedTimeZone : '';
     gates = index >= 0 && Array.isArray(configs[index]?.gates) ? configs[index]!.gates! : [];
     saved(gates.length ? '0' : '');
     await account();

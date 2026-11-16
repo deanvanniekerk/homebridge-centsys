@@ -298,3 +298,35 @@ test('diagnostic logging saves independently of gate setup and survives reopenin
   assert.equal(empty.config[0].diagnosticLogging, true);
   assert.equal(empty.config[0].gates.length, 0);
 });
+
+test('datacentre follows the phone country until the user picks one', async () => {
+  const w = await wizard([]);
+  w.element('region').value = 'za';
+  await w.event('phone', 'input', '+61 400 000 000');
+  assert.equal(w.element('region').value, 'au');
+  await w.event('phone', 'input', '0064 21 000 0000');
+  assert.equal(w.element('region').value, 'au');
+  await w.event('phone', 'input', '+264 81 000 0000');
+  assert.equal(w.element('region').value, 'za');
+  await w.event('region', 'change', 'au');
+  await w.event('phone', 'input', '+27 82 000 0000');
+  assert.equal(w.element('region').value, 'au');
+});
+
+test('optional time zone is validated, saved, reopened and cleared without touching gates', async () => {
+  const w = await wizard([]);
+  const gates = w.config[0].gates;
+  w.element('time-zone').value = 'Australia/Nowhere';
+  await w.event('save-diagnostics', 'click');
+  assert.equal(w.writes, 0);
+  assert.match(w.element('notice').textContent, /IANA time zone/);
+  w.element('time-zone').value = ' Australia/Perth ';
+  await w.event('save-diagnostics', 'click');
+  assert.equal(w.config[0].timeZone, 'Australia/Perth');
+  assert.deepEqual(w.config[0].gates, gates);
+  const reopened = await wizard([], undefined, gates, { timeZone: 'Australia/Perth' });
+  assert.equal(reopened.element('time-zone').value, 'Australia/Perth');
+  reopened.element('time-zone').value = '';
+  await reopened.event('save-diagnostics', 'click');
+  assert.equal('timeZone' in reopened.config[0], false);
+});
